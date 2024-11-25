@@ -1,0 +1,12 @@
+testspace
+*.o
+*.vcd
+*.elf
+*.dump
+*.data
+fpga/fpga
+doc
+.vscode
+prj
+testcase
+user
