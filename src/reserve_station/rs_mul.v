@@ -3,14 +3,12 @@ module reservation_station_mul(
     input in_en,
     input [2:0] op_type,
     input [4:0] vdest_id,
-    input [4:0] dest_reg,
     input op1_dependent,
     input [31:0] op1,
     input op2_dependent,
     input [31:0] op2,
     input writeback1_en,
     input [4:0] writeback1_vregid,
-    input [4:0] writeback1_dest,
     input [31:0] writeback1_val,
     input writeback2_en,
     input [4:0] writeback2_vregid,
@@ -22,7 +20,6 @@ module reservation_station_mul(
     input rst,
     output reg writeback_en,
     output reg [4:0] writeback_vregid,
-    output reg [4:0] writeback_dest,
     output reg [31:0] writeback_val,
     output reg full
 );
@@ -30,7 +27,6 @@ module reservation_station_mul(
     reg live[7:0];
     reg [2:0] opcode[7:0];
     reg [4:0] vreg_id[7:0];
-    reg [4:0] dest[7:0];
     reg a_dependent[7:0];
     reg [31:0] a_val[7:0];
     reg b_dependent[7:0];
@@ -69,7 +65,6 @@ module reservation_station_mul(
     reg has_ready;
     reg [2:0] ready_id;
     reg [4:0] current_vregid;
-    reg [4:0] current_dest;
     reg [2:0] current_opcode;
     always @(*) begin
         reg ready[7:0];
@@ -115,7 +110,6 @@ module reservation_station_mul(
                     end
                     live[ready_id] <= 0;
                     current_vregid <= vreg_id[ready_id];
-                    current_dest <= dest[ready_id];
                     current_opcode <= opcode[ready_id][1];
                 end else if (in_ready) begin
                     mul_in_en <= 1;
@@ -129,7 +123,6 @@ module reservation_station_mul(
                         b_signed <= 1;
                     end
                     current_vregid <= vdest_id;
-                    current_dest <= dest_reg;
                     current_opcode <= op_type;
                 end else begin
                     mul_in_en <= 0;
@@ -145,7 +138,6 @@ module reservation_station_mul(
         end else begin
             writeback_en <= mul_out_en;
             writeback_vregid <= current_vregid;
-            writeback_dest <= current_dest;
             writeback_val <= current_opcode == 3'b000 ? mul_result_lo : mul_result_hi;
         end
     end
@@ -226,7 +218,6 @@ module reservation_station_mul(
                 live[empty_id] <= 1;
                 opcode[empty_id] <= op_type;
                 vreg_id[empty_id] <= vdest_id;
-                dest[empty_id] <= dest_reg;
                 a_dependent[empty_id] <= op1_dependent;
                 a_val[empty_id] <= op1;
                 b_dependent[empty_id] <= op2_dependent;

@@ -3,7 +3,6 @@ module reservation_station_alu(
     input in_en,
     input [4:0] op_type,
     input [4:0] vdest_id,
-    input [4:0] dest_reg,
     input op1_dependent,
     input [31:0] op1,
     input op2_dependent,
@@ -18,7 +17,6 @@ module reservation_station_alu(
     input rst,
     output reg writeback1_en,
     output reg [4:0] writeback1_vregid,
-    output reg [4:0] writeback1_dest,
     output reg [31:0] writeback1_val,
     output reg full
 );
@@ -26,7 +24,6 @@ module reservation_station_alu(
     reg live[15:0];
     reg [4:0] opcode[15:0];
     reg [4:0] vreg_id[15:0];
-    reg [4:0] dest[15:0];
     reg a_dependent[15:0];
     reg [31:0] a_val[15:0];
     reg b_dependent[15:0];
@@ -104,7 +101,6 @@ module reservation_station_alu(
         end else begin
             writeback1_en <= has_ready || in_ready;
             writeback1_vregid <= has_ready ? vreg_id[ready_id] : vdest_id;
-            writeback1_dest <= has_ready ? dest[ready_id] : dest_reg;
             writeback1_val <= alu_result;
             if (has_ready) begin
                 live[ready_id] <= 0;
@@ -196,7 +192,6 @@ module reservation_station_alu(
                 live[empty_id] <= 1;
                 opcode[empty_id] <= op_type;
                 vreg_id[empty_id] <= vdest_id;
-                dest[empty_id] <= dest_reg;
                 a_dependent[empty_id] <= op1_dependent;
                 a_val[empty_id] <= op1;
                 b_dependent[empty_id] <= op2_dependent;
