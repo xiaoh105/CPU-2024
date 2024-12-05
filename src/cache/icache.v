@@ -1,7 +1,8 @@
 // This file implements a simple ICache.
-/* A 1KB, 4 way set-associative ICache
-   Since halfword instruction exists (and may be misaligned), 1 instruction fetch is split into two operations.
-   If the instruction is a halfword, it'll be automatically converted to uncompressed form.
+/* 
+    A 1KB, 2-way set-associative ICache
+    Since halfword instruction exists (and may be misaligned), 1 instruction fetch is split into two operations.
+    If the instruction is a halfword, it'll be automatically converted to uncompressed form.
  */
 module icache(
     input clk,
@@ -14,8 +15,7 @@ module icache(
     output [31:0] instruction,
     output reg c_instruction,
     output reg memory_get_en,
-    output reg [16:0] memory_addr,
-    output reg cache_idle
+    output reg [16:0] memory_addr
 );
     reg busy[127:0][1:0];
     reg [7:0] tag[127:0][1:0];
@@ -67,9 +67,8 @@ module icache(
             instruction_out_en <= 0;
             memory_get_en <= 0;
             current_read_state <= 3'b111;
-            cache_idle <= 1;
-            for (int i = 0; i < 64; ++i) begin
-                for (int j = 0; j < 4; ++j) begin
+            for (int i = 0; i < 128; ++i) begin
+                for (int j = 0; j < 2; ++j) begin
                     busy[i][j] <= 0;
                     lru_tag[i][j] <= 2'b00;
                     tag[i][j] <= 0;
@@ -114,10 +113,8 @@ module icache(
                             end
                             c_instruction <= current_read_data[1:0] != 2'b11;
                             raw_instruction <= current_read_data;
-                            cache_idle <= 1;
                         end else begin
                             instruction_out_en <= 0;
-                            cache_idle <= 0;
                         end
                         replace_index1 <= !busy[index1][1] || busy[index1][0] && !lru_tag[index1][1];
                         replace_index2 <= !busy[index2][1] || busy[index2][0] && !lru_tag[index2][1];
@@ -199,7 +196,6 @@ module icache(
                     tag1 = current_read_addr[16:9];
                     tag2 = current_read_addr_offset[16:9];
                     instruction_out_en <= 1;
-                    cache_idle <= 1;
                     if (index1 == index2) begin
                         current_read_data = (busy[index1][0] && tag[index1][0] == tag1) ? {data[index1][0][3], data[index1][0][2], data[index1][0][1], data[index1][0][0]} : 
                             {data[index1][1][3], data[index1][1][2], data[index1][1][1], data[index1][1][0]};
