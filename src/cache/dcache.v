@@ -16,7 +16,7 @@ module dcache(
     input io_buffer_full,
     input memory_out_en,
     input [7:0] memory_content,
-    output reg load_out_en,
+    output reg rw_feedback_en,
     output reg [31:0] load_data,
     output reg memory_get_en,
     output reg memory_write_mode,
@@ -85,7 +85,7 @@ module dcache(
         if (rst) begin
             state <= 2'b11;
             rw_state <= 2'b00;
-            load_out_en <= 0;
+            rw_feedback_en <= 0;
             idle <= 1;
             io_wait <= 0;
             for (int i = 0; i < 128; ++i) begin
@@ -109,9 +109,9 @@ module dcache(
                         if (!io_buffer_full) begin
                             idle <= 1;
                             state <= 2'b11;
+                            rw_feedback_en <= 1;
                             if (!write_mode) begin
                                 io_display <= 1;
-                                load_out_en <= 1;
                             end
                             io_wait <= 0;
                         end
@@ -129,24 +129,23 @@ module dcache(
                             if (!io_buffer_full) begin
                                 idle <= 1;
                                 state <= 2'b11;
+                                rw_feedback_en <= 1;
                                 if (!write_mode) begin
                                     io_display <= 1;
-                                    load_out_en <= 1;
                                 end else begin
                                     io_display <= 0;
-                                    load_out_en <= 0;
                                 end
                             end else begin
                                 io_wait <= 1;
                                 io_display <= 0;
-                                load_out_en <= 0;
+                                rw_feedback_en <= 0;
                                 idle <= 0;
                             end
                         end else if (busy[index][0] && tag[index][0] == data_tag || busy[index][1] && tag[index][1] == data_tag) begin
                             io_display <= 0;
                             replace = busy[index][1] && tag[index][1] == data_tag;
+                            rw_feedback_en <= 1;
                             if (write_mode) begin
-                                load_out_en <= 0;
                                 case (width)
                                     2'b00: begin
                                         data[index][replace][offset] <= write_data[7:0];
@@ -162,7 +161,6 @@ module dcache(
                                 lru_tag[index][replace] <= 1;
                                 lru_tag[index][replace^1] <= 0;
                             end else begin
-                                load_out_en <= 1;
                                 case (width)
                                     2'b00: begin
                                         result = {{24{sign_ext ? data[index][replace][offset][7] : 1'b0}}, data[index][replace][offset]};
@@ -174,7 +172,7 @@ module dcache(
                                             data[index][replace][offset]
                                         };
                                     end
-                                    2'b11: begin
+                                    2'b10: begin
                                         result = {data[index][replace][3], data[index][replace][2], data[index][replace][1], data[index][replace][0]};
                                     end
                                 endcase
@@ -185,7 +183,7 @@ module dcache(
                             state <= 2'b11;
                             idle <= 1;
                         end else begin
-                            load_out_en <= 0;
+                            rw_feedback_en <= 0;
                             idle <= 0;
                             io_display <= 0;
                             rw_state <= 0;
@@ -201,6 +199,8 @@ module dcache(
                                 state <= 2'b00;
                             end
                         end
+                    end else begin
+                        rw_feedback_en <= 0;
                     end
                 end
                 2'b00: begin
@@ -238,6 +238,7 @@ module dcache(
                     lru_tag[mem_index][replace_id] <= 1;
                     lru_tag[mem_index][replace_id^1] <= 0;
                     offset = mem_addr[1:0];
+                    rw_feedback_en <= 1;
                     if (mem_write) begin
                         dirty[mem_index][replace_id] <= 1;
                         case (mem_width)
@@ -253,7 +254,6 @@ module dcache(
                             end
                         endcase
                     end else begin
-                        load_out_en <= 1;
                         case (mem_width)
                             2'b00: begin
                                 load_data <= {{24{sext ? data[mem_index][replace_id][offset][7] : 1'b0}}, data[mem_index][replace_id][offset]};
