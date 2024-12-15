@@ -9,7 +9,9 @@ module decompress(
         reg [11:0] imm;
         reg [2:0] funct3;
         reg [6:0] funct7;
-        if (instr[1:0] == 2'b00) begin
+        if (instr[1:0] == 2'b11) begin
+            instr_out = instr;
+        end else if (instr[1:0] == 2'b00) begin
             if (instr[15:13] == 3'b000) begin
                 // C.ADDI4SPN to ADDI
                 imm = {2'b0, instr[10:7], instr[12:11], instr[6], instr[5], 2'b00};
@@ -25,8 +27,8 @@ module decompress(
         end else if (instr[1:0] == 2'b01) begin
             if (instr[14:13] == 2'b01) begin
                 // C.J/C.JAL to JAL
-                imm = {instr[12], instr[8], instr[10:9], instr[6], instr[7], instr[2], instr[11], instr[5:3], 2'b00};
-                instr_out = {1'b0, imm[10:1], imm[11], 8'b0, (instr[15] ? 5'b0 : 5'b1), 7'b1101111};
+                imm = {instr[12], instr[8], instr[10:9], instr[6], instr[7], instr[2], instr[11], instr[5:3], 1'b0};
+                instr_out = {imm[11], imm[10:1], imm[11], {8{imm[11]}}, (instr[15] ? 5'b0 : 5'b1), 7'b1101111};
             end else if (instr[15:13] == 3'b010) begin
                 // C.LI to ADDI
                 imm = {{6{instr[12]}}, instr[12], instr[6:2]};
@@ -102,8 +104,6 @@ module decompress(
                 imm = {4'b0, instr[8:7], instr[12:9], 2'b0};
                 instr_out = {imm[11:5], instr[6:2], 5'd2, 3'b010, imm[4:0], 7'b0100011};
             end
-        end else begin
-            instr_out = instr;
         end
     end
 endmodule
