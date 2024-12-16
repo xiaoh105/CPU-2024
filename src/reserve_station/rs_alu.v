@@ -1,5 +1,7 @@
 // This file includes the reservation station, packed with the standard ALU
 module reservation_station_alu(
+    input clk,
+    input rst,
     input in_en,
     input [4:0] op_type,
     input [4:0] vdest_id,
@@ -13,8 +15,6 @@ module reservation_station_alu(
     input writeback3_en,
     input [4:0] writeback3_vregid,
     input [31:0] writeback3_val,
-    input clk,
-    input rst,
     output reg writeback1_en,
     output reg [4:0] writeback1_vregid,
     output reg [31:0] writeback1_val,

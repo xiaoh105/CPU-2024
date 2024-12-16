@@ -20,9 +20,12 @@ module reorder_buffer(
     input writeback3_en,
     input [4:0] writeback3_vregid,
     input [31:0] writeback3_val,
-    input [4:0] query_vregid,
-    output reg query_dependency,
-    output reg [31:0] query_val,
+    input [4:0] query_vregid1,
+    input [4:0] query_vregid2,
+    output reg query_dependency1,
+    output reg [31:0] query_val1,
+    output reg query_dependency2,
+    output reg [31:0] query_val2,
     output reg reset_en,
     output reg [16:0] reset_new_pc,
     output reg predictor_input_en,
@@ -36,6 +39,7 @@ module reorder_buffer(
     output reg commit_en,
     output reg register_writeback_en,
     output reg [4:0] register_writeback_id,
+    output reg [4:0] register_writeback_dependency,
     output reg [31:0] register_writeback_val
 );
     reg [4:0] head, tail;
@@ -54,24 +58,45 @@ module reorder_buffer(
     reg predict[31:0];
 
     always @(*) begin
-        if (!val1_rdy[query_vregid]) begin
-            if (writeback1_en && writeback1_vregid == query_vregid) begin
-                query_dependency <= 0;
-                query_val <= writeback1_val;
-            end else if (writeback2_en && writeback2_vregid == query_vregid) begin
-                query_dependency <= 0;
-                query_val <= writeback2_val;
-            end else if (writeback3_en && writeback3_vregid == query_vregid) begin
-                query_dependency <= 0;
-                query_val <= writeback3_val;
+        if (!val1_rdy[query_vregid1]) begin
+            if (writeback1_en && writeback1_vregid == query_vregid1) begin
+                query_dependency1 <= 0;
+                query_val1 <= writeback1_val;
+            end else if (writeback2_en && writeback2_vregid == query_vregid1) begin
+                query_dependency1 <= 0;
+                query_val1 <= writeback2_val;
+            end else if (writeback3_en && writeback3_vregid == query_vregid1) begin
+                query_dependency1 <= 0;
+                query_val1 <= writeback3_val;
             end else begin
-                query_dependency <= 1;
+                query_dependency1 <= 1;
             end
         end else begin
-            query_dependency <= 0;
-            query_val <= op_type[query_vregid] == 3'b011 ? val2[query_vregid] : val1[query_vregid];
+            query_dependency1 <= 0;
+            query_val1 <= op_type[query_vregid1] == 3'b011 ? val2[query_vregid1] : val1[query_vregid1];
         end
     end
+
+    always @(*) begin
+        if (!val1_rdy[query_vregid2]) begin
+            if (writeback1_en && writeback1_vregid == query_vregid2) begin
+                query_dependency2 <= 0;
+                query_val2 <= writeback1_val;
+            end else if (writeback2_en && writeback2_vregid == query_vregid2) begin
+                query_dependency2 <= 0;
+                query_val2 <= writeback2_val;
+            end else if (writeback3_en && writeback3_vregid == query_vregid2) begin
+                query_dependency2 <= 0;
+                query_val2 <= writeback3_val;
+            end else begin
+                query_dependency2 <= 1;
+            end
+        end else begin
+            query_dependency2 <= 0;
+            query_val2 <= op_type[query_vregid2] == 3'b011 ? val2[query_vregid2] : val1[query_vregid2];
+        end
+    end
+
     always @(posedge clk or posedge rst) begin
         if (rst || reset_en) begin
             head <= 0;
@@ -100,6 +125,7 @@ module reorder_buffer(
                         predictor_input_en <= 0;
                         stack_input_en <= 0;
                         register_writeback_id <= dest[head];
+                        register_writeback_dependency <= head;
                         register_writeback_val <= val1[head];
                     end
                     3'b001: begin
@@ -115,7 +141,7 @@ module reorder_buffer(
                         stack_input_en <= 0;
                         if (predict[head] != val1[head][0]) begin
                             reset_en <= 1;
-                            reset_new_pc <= val2[head];
+                            reset_new_pc <= val1[head][0] ? val2[head] : addr[head] + 17'd4;
                         end
                         predictor_addr <= addr[head];
                         branch_take <= val1[head][0];
@@ -126,6 +152,7 @@ module reorder_buffer(
                         predictor_input_en <= 0;
                         stack_input_en <= 1;
                         register_writeback_id <= dest[head];
+                        register_writeback_dependency <= head;
                         register_writeback_val <= val2[head];
                         stack_push_mode <= 1;
                         stack_push_addr <= val2[head];
@@ -136,6 +163,7 @@ module reorder_buffer(
                         predictor_input_en <= 0;
                         stack_input_en <= 1;
                         register_writeback_id <= dest[head];
+                        register_writeback_dependency <= head;
                         register_writeback_val <= val2[head];
                         stack_push_mode <= 0;
                         if (!predict[head]) begin
