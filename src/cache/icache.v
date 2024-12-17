@@ -62,7 +62,7 @@ module icache(
         endcase
     end
     reg checkpoint;
-    always @(posedge clk or posedge rst) begin
+    always @(posedge clk) begin
         if (rst) begin
             instruction_out_en <= 0;
             memory_get_en <= 0;
@@ -84,7 +84,7 @@ module icache(
                     if (instruction_get_en) begin
                         current_read_addr <= instruction_addr;
                         block_fill_state <= 0;
-                        addr_tmp = instruction_addr + 2;
+                        addr_tmp = instruction_addr + 17'd2;
                         index1 = instruction_addr[8:2];
                         index2 = addr_tmp[8:2];
                         tag1 = instruction_addr[16:9];
@@ -150,7 +150,7 @@ module icache(
                             if (memory_out_en) begin
                                 data[addr_index1][replace_index1][3] <= memory_content;
                                 block_fill_state <= 2'b00;
-                                nready = (addr_index1 != addr_index2 && data[addr_index1][replace_index1][2][1:0] != 2'b11 &&
+                                nready = (addr_index1 != addr_index2 &&
                                     (!busy[addr_index2][0] || tag[addr_index2][0] != addr_tag2) && 
                                     (!busy[addr_index2][0] || tag[addr_index2][1] != addr_tag2));
                                 current_read_state <= nready ? 2'b01 : 2'b10;

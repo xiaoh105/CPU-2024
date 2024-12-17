@@ -18,7 +18,7 @@ module writeback_controller(
     reg [4:0] head,tail;
     reg [4:0] vregid[31:0];
     reg [31:0] val[31:0];
-    always @(posedge clk or posedge rst) begin
+    always @(posedge clk) begin
         reg [4:0] tail2, tail3;
         if (rst) begin
             head <= 5'b0;

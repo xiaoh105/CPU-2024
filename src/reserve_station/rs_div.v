@@ -92,7 +92,7 @@ module reservation_station_div(
         ready_id = ready_width4[0] ? ready_id_width4[0] : ready_id_width4[1];
         has_ready = ready_width4[0] || ready_width4[1];
     end
-    always @(posedge clk or posedge rst) begin
+    always @(posedge clk) begin
         if (!rst) begin
             if (div_idle) begin
                 if (has_ready) begin
@@ -118,7 +118,7 @@ module reservation_station_div(
             end
         end
     end
-    always @(posedge clk or posedge rst) begin
+    always @(posedge clk) begin
         if (rst) begin
             writeback_en <= 0;
         end else begin
@@ -155,7 +155,7 @@ module reservation_station_div(
         end
         empty_id = empty_width4[0] ? id_width4[0] : id_width4[1];
     end
-    always @(posedge clk or posedge rst) begin
+    always @(posedge clk) begin
         if (rst) begin
             full <= 0;
             size <= 0;
@@ -204,10 +204,22 @@ module reservation_station_div(
                 live[empty_id] <= 1;
                 opcode[empty_id] <= op_type;
                 vreg_id[empty_id] <= vdest_id;
-                a_dependent[empty_id] <= op1_dependent;
-                a_val[empty_id] <= op1;
-                b_dependent[empty_id] <= op2_dependent;
-                b_val[empty_id] <= op2;
+                a_dependent[empty_id] <= 
+                    (writeback1_en && writeback1_vregid == op1[4:0]) || 
+                    (writeback2_en && writeback2_vregid == op1[4:0]) || 
+                    (writeback3_en && writeback3_vregid == op1[4:0]) ? 1 : op1_dependent;
+                a_val[empty_id] <= !op1_dependent ? op1 : 
+                    (writeback1_en && writeback1_vregid == op1[4:0]) ? writeback1_val : 
+                    (writeback2_en && writeback2_vregid == op1[4:0]) ? writeback2_val : 
+                    (writeback3_en && writeback3_vregid == op1[4:0]) ? writeback3_val : op1;
+                b_dependent[empty_id] <= 
+                    (writeback1_en && writeback1_vregid == op2[4:0]) || 
+                    (writeback2_en && writeback2_vregid == op2[4:0]) || 
+                    (writeback3_en && writeback3_vregid == op2[4:0]) ? 1 : op2_dependent;
+                b_val[empty_id] <= !op2_dependent ? op2 : 
+                    (writeback1_en && writeback1_vregid == op2[4:0]) ? writeback1_val : 
+                    (writeback2_en && writeback2_vregid == op2[4:0]) ? writeback2_val : 
+                    (writeback3_en && writeback3_vregid == op2[4:0]) ? writeback3_val : op2;
             end
         end
     end

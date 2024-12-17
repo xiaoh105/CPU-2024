@@ -423,6 +423,7 @@ module cpu(
 
     decoder decoder(
         .clk(clk_in),
+        .rob_rst(rob_rst),
         .instruction_in(instruction_decode_en),
         .instruction(instruction),
         .c_instruction(cinstruction_decode),

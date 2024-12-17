@@ -18,11 +18,11 @@ module memory_controller(
     output reg [7:0] mem_dout
 );
     always @(*) begin
-        mem_write_mode = dcache_out_en ? dcache_write_mode : 0;
-        mem_addr = dcache_out_en ? dcache_addr : 
-            icache_out_en ? icache_addr : 0;
-        mem_dout = dcache_out_en ? dcache_data :
-            icache_out_en ? icache_addr : 0;
+        mem_write_mode = dcache_rw_en ? dcache_write_mode : 0;
+        mem_addr = dcache_rw_en ? dcache_addr : 
+            icache_rw_en ? icache_addr : 0;
+        mem_dout = dcache_rw_en ? dcache_data :
+            icache_rw_en ? icache_addr : 0;
     end
     always @(*) begin
         dcache_out_data = mem_din;
@@ -32,8 +32,8 @@ module memory_controller(
         if (rst) begin
             dcache_out_en <= 0;
             icache_out_en <= 0;
+            mem_addr <= 0;
             mem_write_mode <= 0;
-            mem_addr <= 18'b0;
         end else begin
             dcache_out_en <= dcache_rw_en;
             icache_out_en <= dcache_rw_en ? 0 : icache_rw_en;

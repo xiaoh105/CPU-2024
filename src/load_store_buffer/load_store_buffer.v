@@ -54,23 +54,25 @@ module load_store_buffer(
     reg [31:0] value[15:0];
     reg [1:0] width[15:0];
 
+    reg check_addr_rdy, check_write_op;
+
     reg rob_rst_block;
 
     always @(*) begin
+        check_addr_rdy = addr_rdy[head];
+        check_write_op = write_op[4'hc];
         if (dcache_rw_feedback_en) begin
-            if (head + 1 != tail) begin
-                if (write_op[head+1] && addr_rdy[head+1] && value_rdy[head+1] && commit[head+1]) begin
+            dcache_addr = address[head+4'd1][17:0];
+            dcache_sign_ext = value[head+4'd1][31];
+            dcache_width = width[head+4'd1];
+            dcache_value = value[head+4'd1];
+            if (head + 4'd1 != tail) begin
+                if (write_op[head+4'd1] && addr_rdy[head+4'd1] && value_rdy[head+4'd1] && commit[head+4'd1]) begin
                     dcache_rw_en = 1;
                     dcache_write_mode = 1;
-                    dcache_width = width[head+1];
-                    dcache_addr = address[head+1][17:0];
-                    dcache_value = value[head+1];
-                end else if (!write_op[head+1] && addr_rdy[head+1]) begin
+                end else if (!write_op[head+4'd1] && addr_rdy[head+4'd1]) begin
                     dcache_rw_en = 1;
                     dcache_write_mode = 0;
-                    dcache_width = width[head+1];
-                    dcache_sign_ext = value[head+1][31];
-                    dcache_addr = address[head+1][17:0];
                 end else begin
                     dcache_rw_en = 0;
                 end
@@ -78,18 +80,16 @@ module load_store_buffer(
                 dcache_rw_en = 0;
             end
         end else if (head != tail && dcache_idle) begin
+            dcache_addr = address[head][17:0];
+            dcache_sign_ext = value[head][31];
+            dcache_value = value[head];
+            dcache_width = width[head];
             if (write_op[head] && addr_rdy[head] && value_rdy[head] && commit[head]) begin
                 dcache_rw_en = 1;
                 dcache_write_mode = 1;
-                dcache_width = width[head];
-                dcache_addr = address[head][17:0];
-                dcache_value = value[head];
             end else if (!write_op[head] && addr_rdy[head]) begin
                 dcache_rw_en = 1;
                 dcache_write_mode = 0;
-                dcache_width = width[head];
-                dcache_sign_ext = value[head][31];
-                dcache_addr = address[head][17:0];
             end else begin
                 dcache_rw_en = 0;
             end
@@ -97,8 +97,7 @@ module load_store_buffer(
             dcache_rw_en = 0;
         end
     end
-
-    always @(posedge clk or posedge rst) begin
+    always @(posedge clk) begin
         if (rst) begin
             head <= 0;
             tail <= 0;
@@ -107,14 +106,15 @@ module load_store_buffer(
             full <= 0;
             for (int i = 0; i < 16; ++i) begin
                 commit[i] <= 0;
+                write_op[i] <= 0;
             end
         end else if (rob_rst) begin
             reg [3:0] tmp1, tmp2, tmp3, tmp4, new_tail;
-            tmp1 = (write_op[head+8] && commit[head+8]) ? head + 8 : head;
-            tmp2 = (write_op[tmp1+4] && commit[tmp1+4]) ? tmp1 + 4 : tmp1;
-            tmp3 = (write_op[tmp2+2] && commit[tmp2+2]) ? tmp2 + 2 : tmp2;
-            tmp4 = (write_op[tmp3+1] && commit[tmp3+1]) ? tmp3 + 1 : tmp3;
-            new_tail = (write_op[tmp4] && !commit[tmp4]) ? tmp4 : tmp4 + 1;
+            tmp1 = (write_op[head+4'd8] && commit[head+4'd8]) ? head + 4'd8 : head;
+            tmp2 = (write_op[tmp1+4'd4] && commit[tmp1+4'd4]) ? tmp1 + 4'd4 : tmp1;
+            tmp3 = (write_op[tmp2+4'd2] && commit[tmp2+4'd2]) ? tmp2 + 4'd2 : tmp2;
+            tmp4 = (write_op[tmp3+4'd1] && commit[tmp3+4'd1]) ? tmp3 + 4'd1 : tmp3;
+            new_tail = (write_op[tmp4] && !commit[tmp4]) ? tmp4 : tmp4 + 4'd1;
             for (int i = 0; i < 16; ++i) begin
                 if (new_tail <= i && i < tail || tail < new_tail && new_tail <= i) begin
                     commit[i] <= 0;
@@ -145,13 +145,25 @@ module load_store_buffer(
             end
             if (rw_en) begin
                 write_op[tail] <= write_mode;
-                addr_rdy[tail] <= addr_ready;
-                address[tail] <= rw_addr;
+                addr_rdy[tail] <= 
+                    (writeback1_en && writeback1_vregid == addr_dependency) || 
+                    (writeback2_en && writeback2_vregid == addr_dependency) || 
+                    (writeback3_en && writeback3_vregid == addr_dependency) ? 1 : addr_ready;
+                address[tail] <= addr_ready ? rw_addr : 
+                    (writeback1_en && writeback1_vregid == addr_dependency) ? writeback1_val + rw_addr : 
+                    (writeback2_en && writeback2_vregid == addr_dependency) ? writeback2_val + rw_addr :
+                    (writeback3_en && writeback3_vregid == addr_dependency) ? writeback3_val + rw_addr : rw_addr;
                 address[tail][31:27] <= addr_dependency;
                 width[tail] <= rw_width;
                 if (write_mode) begin
-                    value_rdy[tail] <= value_ready;
-                    value[tail] <= write_value;
+                    value_rdy[tail] <= 
+                        (writeback1_en && writeback1_vregid == write_value[4:0]) || 
+                        (writeback2_en && writeback2_vregid == write_value[4:0]) || 
+                        (writeback3_en && writeback3_vregid == write_value[4:0]) ? 1 : value_ready;
+                    value[tail] <= value_ready ? write_value : 
+                        (writeback1_en && writeback1_vregid == write_value[4:0]) ? writeback1_val : 
+                        (writeback2_en && writeback2_vregid == write_value[4:0]) ? writeback2_val : 
+                        (writeback3_en && writeback3_vregid == write_value[4:0]) ? writeback3_val : write_value;
                 end else begin
                     value_rdy[tail] <= 1;
                     value[tail][4:0] <= read_vdest;
@@ -187,14 +199,14 @@ module load_store_buffer(
                     end
                 end
             end
-            full <= tail + 1 + rw_en == head;
+            full <= tail + 4'd1 + rw_en == head || tail + 4'd2 + rw_en == head;
             if (commit_en) begin
                 reg [3:0] tmp1, tmp2, tmp3, tmp4, commit_id;
-                tmp1 = (write_op[head+8] && commit[head+8]) ? head + 8 : head;
-                tmp2 = (write_op[tmp1+4] && commit[tmp1+4]) ? tmp1 + 4 : tmp1;
-                tmp3 = (write_op[tmp2+2] && commit[tmp2+2]) ? tmp2 + 2 : tmp2;
-                tmp4 = (write_op[tmp3+1] && commit[tmp3+1]) ? tmp3 + 1 : tmp3;
-                commit_id = (write_op[tmp4] && !commit[tmp4]) ? tmp4 : tmp4 + 1;
+                tmp1 = (write_op[head+4'd8] && commit[head+4'd8]) ? head + 4'd8 : head;
+                tmp2 = (write_op[tmp1+4'd4] && commit[tmp1+4'd4]) ? tmp1 + 4'd4 : tmp1;
+                tmp3 = (write_op[tmp2+4'd2] && commit[tmp2+4'd2]) ? tmp2 + 4'd2 : tmp2;
+                tmp4 = (write_op[tmp3+4'd1] && commit[tmp3+4'd1]) ? tmp3 + 4'd1 : tmp3;
+                commit_id = (write_op[tmp4] && !commit[tmp4]) ? tmp4 : tmp4 + 4'd1;
                 commit[commit_id] <= 1;
             end
         end

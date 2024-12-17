@@ -23,14 +23,18 @@ module regfile(
     reg reg_has_dependency[31:0];
     reg [4:0] reg_dependency[31:0];
     always @(*) begin
-        query1_has_dependency = (write_en && write_dependency == reg_dependency[query1_id]) ? 0 : reg_has_dependency[query1_id];
-        query1_dependency = reg_dependency[query1_id];
+        query1_has_dependency = 
+            (dependency_set_en && dependency_reg == query1_id) ? 1 :
+                (write_en && write_dependency == reg_dependency[query1_id]) ? 0 : reg_has_dependency[query1_id];
+        query1_dependency = (dependency_set_en && dependency_reg == query1_id) ? dependency_dependency : reg_dependency[query1_id];
         query1_val = (write_en && write_dependency == reg_dependency[query1_id]) ? write_val : reg_value[query1_id];
-        query2_has_dependency = (write_en && write_dependency == reg_dependency[query2_id]) ? 0 : reg_has_dependency[query2_id];
-        query2_dependency = reg_dependency[query2_id];
+        query2_has_dependency = 
+            (dependency_set_en && dependency_reg == query2_id) ? 1 :
+                (write_en && write_dependency == reg_dependency[query2_id]) ? 0 : reg_has_dependency[query2_id];
+        query2_dependency = (dependency_set_en && dependency_reg == query2_id) ? dependency_dependency : reg_dependency[query2_id];
         query2_val = (write_en && write_dependency == reg_dependency[query2_id]) ? write_val : reg_value[query2_id];
     end
-    always @(posedge clk or posedge rst or posedge dependency_rst) begin
+    always @(posedge clk) begin
         if (rst) begin
             for (int i = 0; i < 32; ++i) begin
                 reg_has_dependency[i] <= 0;

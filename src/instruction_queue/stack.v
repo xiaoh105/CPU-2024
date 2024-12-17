@@ -13,7 +13,7 @@ module call_stack(
     always @(*) begin
         top = (in_en && !push_mode) ? addr_stack[ptr-1] : addr_stack[ptr];
     end
-    always @(posedge clk or posedge rst) begin
+    always @(posedge clk) begin
         if (rst) begin
             ptr <= 0;
             addr_stack[0] <= 0;

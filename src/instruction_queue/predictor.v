@@ -22,7 +22,7 @@ module predictor(
     end
 
     // Updating branch information using provided information
-    always @(posedge clk or posedge rst) begin
+    always @(posedge clk) begin
         if (rst) begin
             global_state <= 0;
             for (int i = 0; i < 1024; ++i) begin

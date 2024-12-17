@@ -41,7 +41,7 @@ module mul32(
             );
         end
     endgenerate
-    always @(posedge clk or posedge rst) begin
+    always @(posedge clk) begin
         reg [63:0] abs_a, abs_b;
         if (rst) begin
             state <= 3'b111;

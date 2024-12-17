@@ -64,23 +64,23 @@ module reservation_station_alu(
             ready[i] = live[i] && !a_dependent[i] && !b_dependent[i];
         end
         for (int i = 0; i < 8; ++i) begin
-            ready_width2[i] = ready[i] || ready[i + 8];
+            ready_width2[i] = ready[i] || ready[i + 4'd8];
         end
         for (int i = 0; i < 4; ++i) begin
-            ready_width4[i] = ready_width2[i] || ready_width2[i + 4];
+            ready_width4[i] = ready_width2[i] || ready_width2[i + 4'd4];
         end
         for (int i = 0; i < 2; ++i) begin
-            ready_width8[i] = ready_width4[i] || ready_width4[i + 2];
+            ready_width8[i] = ready_width4[i] || ready_width4[i + 4'd2];
         end
         // Find out ready_id
         for (int i = 0; i < 8; ++i) begin
-            ready_id_width2[i] = ready[i] ? i : i + 8;
+            ready_id_width2[i] = ready[i] ? i : i + 4'd8;
         end
         for (int i = 0; i < 4; ++i) begin
-            ready_id_width4[i] = ready_width2[i] ? ready_id_width2[i] : ready_id_width2[i + 4];
+            ready_id_width4[i] = ready_width2[i] ? ready_id_width2[i] : ready_id_width2[i + 4'd4];
         end
         for (int i = 0; i < 2; ++i) begin
-            ready_id_width8[i] = ready_width4[i] ? ready_id_width4[i] : ready_id_width4[i + 2];
+            ready_id_width8[i] = ready_width4[i] ? ready_id_width4[i] : ready_id_width4[i + 4'd2];
         end
         ready_id = ready_width8[0] ? ready_id_width8[0] : ready_id_width8[1];
         has_ready = ready_width8[0] || ready_width8[1];
@@ -95,7 +95,7 @@ module reservation_station_alu(
             alu_input_opcode = op_type;
         end
     end
-    always @(posedge clk or posedge rst) begin
+    always @(posedge clk) begin
         if (rst) begin
             writeback1_en <= 0;
         end else begin
@@ -123,27 +123,27 @@ module reservation_station_alu(
         reg [3:0] id_width4[3:0];
         reg [3:0] id_width8[1:0];
         for (int i = 0; i < 8; ++i) begin
-            empty_width2[i] = !live[i] || !live[i + 8];
+            empty_width2[i] = !live[i] || !live[i + 4'd8];
         end
         for (int i = 0; i < 4; ++i) begin
-            empty_width4[i] = empty_width2[i] || empty_width2[i + 4];
+            empty_width4[i] = empty_width2[i] || empty_width2[i + 4'd4];
         end
         for (int i = 0; i < 2; ++i) begin
-            empty_width8[i] = empty_width4[i] || empty_width4[i + 2];
+            empty_width8[i] = empty_width4[i] || empty_width4[i + 4'd2];
         end
         // Find out empty_id
         for (int i = 0; i < 8; ++i) begin
-            id_width2[i] = live[i] ? i + 8 : i;
+            id_width2[i] = live[i] ? i + 4'd8 : i;
         end
         for (int i = 0; i < 4; ++i) begin
-            id_width4[i] = empty_width2[i] ? id_width2[i] : id_width2[i + 4];
+            id_width4[i] = empty_width2[i] ? id_width2[i] : id_width2[i + 4'd4];
         end
         for (int i = 0; i < 2; ++i) begin
-            id_width8[i] = empty_width4[i] ? id_width4[i] : id_width4[i + 2];
+            id_width8[i] = empty_width4[i] ? id_width4[i] : id_width4[i + 4'd2];
         end
         empty_id = empty_width8[0] ? id_width8[0] : id_width8[1];
     end
-    always @(posedge clk or posedge rst) begin
+    always @(posedge clk) begin
         if (rst) begin
             full <= 0;
             size <= 0;
@@ -192,10 +192,22 @@ module reservation_station_alu(
                 live[empty_id] <= 1;
                 opcode[empty_id] <= op_type;
                 vreg_id[empty_id] <= vdest_id;
-                a_dependent[empty_id] <= op1_dependent;
-                a_val[empty_id] <= op1;
-                b_dependent[empty_id] <= op2_dependent;
-                b_val[empty_id] <= op2;
+                a_dependent[empty_id] <= 
+                    (writeback1_en && writeback1_vregid == op1[4:0]) || 
+                    (writeback2_en && writeback2_vregid == op1[4:0]) || 
+                    (writeback3_en && writeback3_vregid == op1[4:0]) ? 0 : op1_dependent;
+                a_val[empty_id] <= !op1_dependent ? op1 : 
+                    (writeback1_en && writeback1_vregid == op1[4:0]) ? writeback1_val : 
+                    (writeback2_en && writeback2_vregid == op1[4:0]) ? writeback2_val : 
+                    (writeback3_en && writeback3_vregid == op1[4:0]) ? writeback3_val : op1;
+                b_dependent[empty_id] <= 
+                    (writeback1_en && writeback1_vregid == op2[4:0]) || 
+                    (writeback2_en && writeback2_vregid == op2[4:0]) || 
+                    (writeback3_en && writeback3_vregid == op2[4:0]) ? 0 : op2_dependent;
+                b_val[empty_id] <= !op2_dependent ? op2 : 
+                    (writeback1_en && writeback1_vregid == op2[4:0]) ? writeback1_val : 
+                    (writeback2_en && writeback2_vregid == op2[4:0]) ? writeback2_val : 
+                    (writeback3_en && writeback3_vregid == op2[4:0]) ? writeback3_val : op2;
             end
         end
     end

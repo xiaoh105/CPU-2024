@@ -44,7 +44,7 @@ module decompress(
                 end
             end else if (instr[15:14] == 2'b11) begin
                 // C.BEQZ to BEQ
-                imm = {{3{instr[12]}}, instr[12], instr[6:5], instr[2], instr[11:10], instr[4:3], 2'b0};
+                imm = {{3{instr[12]}}, instr[12], instr[6:5], instr[2], instr[11:10], instr[4:3], 1'b0};
                 instr_out = {imm[11], imm[10:5], 5'b0, 2'b01, instr[9:7], 2'b00, instr[13], imm[4:1], imm[11], 7'b1100011};
             end else if (!instr[15]) begin
                 // C.NOP/C.ADDI to ADDI

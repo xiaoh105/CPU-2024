@@ -50,7 +50,7 @@ module dcache(
                     load_data = {{24{sext ? memory_content[7] : 1'b0}}, memory_content};
                 end else if ((rw_en && rw_addr[17:16] == 2'b11 && write_mode || io_wait && mem_write) && !io_buffer_full) begin
                     memory_get_en = 1;
-                    memory_write_mode = 0;
+                    memory_write_mode = 1;
                     memory_addr = rw_addr;
                     memory_data = mem_data;
                 end else begin
@@ -81,7 +81,7 @@ module dcache(
             end
         endcase
     end
-    always @(posedge clk or posedge rst) begin
+    always @(posedge clk) begin
         if (rst) begin
             state <= 2'b11;
             rw_state <= 2'b00;
