@@ -218,18 +218,18 @@ module reservation_station_mul(
                 live[empty_id] <= 1;
                 opcode[empty_id] <= op_type;
                 vreg_id[empty_id] <= vdest_id;
-                a_dependent[empty_id] <= 
+                a_dependent[empty_id] <= !op1_dependent ? 0 :
                     (writeback1_en && writeback1_vregid == op1[4:0]) || 
                     (writeback2_en && writeback2_vregid == op1[4:0]) || 
-                    (writeback3_en && writeback3_vregid == op1[4:0]) ? 1 : op1_dependent;
+                    (writeback3_en && writeback3_vregid == op1[4:0]) ? 0 : op1_dependent;
                 a_val[empty_id] <= !op1_dependent ? op1 : 
                     (writeback1_en && writeback1_vregid == op1[4:0]) ? writeback1_val : 
                     (writeback2_en && writeback2_vregid == op1[4:0]) ? writeback2_val : 
                     (writeback3_en && writeback3_vregid == op1[4:0]) ? writeback3_val : op1;
-                b_dependent[empty_id] <= 
+                b_dependent[empty_id] <= !op1_dependent ? 0 :
                     (writeback1_en && writeback1_vregid == op2[4:0]) || 
                     (writeback2_en && writeback2_vregid == op2[4:0]) || 
-                    (writeback3_en && writeback3_vregid == op2[4:0]) ? 1 : op2_dependent;
+                    (writeback3_en && writeback3_vregid == op2[4:0]) ? 0 : op2_dependent;
                 b_val[empty_id] <= !op2_dependent ? op2 : 
                     (writeback1_en && writeback1_vregid == op2[4:0]) ? writeback1_val : 
                     (writeback2_en && writeback2_vregid == op2[4:0]) ? writeback2_val : 

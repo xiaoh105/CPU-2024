@@ -9,7 +9,11 @@ module instruction_queue(
     input icache_out_en,
     input icache_cinstruction,
     input [31:0] icache_instruction,
-    input decoder_idle,
+    input lsb_full,
+    input rs_alu_full,
+    input rs_mul_full,
+    input rs_div_full,
+    input rob_full,
     output reg [16:0] branch_query_addr,
     output reg instruction_en,
     output reg [31:0] instruction,
@@ -29,6 +33,42 @@ module instruction_queue(
     reg [16:0] next_program_counter;
     reg branch_take;
     reg [16:0] jalr_prediction;
+    reg idle;
+
+    always @(*) begin
+        if (!rob_full) begin
+            casez (icache_instruction[6:0])
+                7'b0110011: begin
+                    idle = icache_instruction[25] ? 
+                        (icache_instruction[14] ? !rs_div_full : !rs_mul_full) : 
+                        !rs_alu_full;
+                end
+                7'b0010011: begin
+                    idle = !rs_alu_full;
+                end
+                7'b0z00011: begin
+                    idle = !lsb_full;
+                end
+                7'b1100011: begin
+                    idle = !rs_alu_full;
+                end
+                7'b1101111: begin
+                    idle = 1;
+                end
+                7'b1100111: begin
+                    idle = !rs_alu_full;
+                end
+                7'b0z10111: begin
+                    idle = !rs_alu_full;
+                end
+                default: begin
+                    idle = 0;
+                end
+            endcase
+        end else begin
+            idle = 0;
+        end
+    end
 
     always @(*) begin
         branch_query_addr = program_counter;
@@ -65,7 +105,7 @@ module instruction_queue(
         if (bootstrap) begin
             icache_fetch_en = 1;
             icache_fetch_addr = program_counter;
-        end else if (!rst && (icache_out_en || instruction_rdy) && decoder_idle && !reset_block_drop) begin
+        end else if (!rst && !pc_rst && (icache_out_en || instruction_rdy) && idle && !reset_block_drop) begin
             icache_fetch_en = 1;
             icache_fetch_addr = next_program_counter;
         end else begin
@@ -96,7 +136,7 @@ module instruction_queue(
             bootstrap <= 0;
             if (bootstrap) begin
                 instruction_en <= 0;
-            end else if (instruction_rdy && decoder_idle) begin
+            end else if (instruction_rdy && idle) begin
                 instruction_rdy <= 0;
                 program_counter <= next_program_counter;
                 instruction_en <= 1;
@@ -106,7 +146,7 @@ module instruction_queue(
                 instruction_br_prediction <= branch_take;
                 pc_out <= program_counter;
             end else if (icache_out_en) begin
-                if (!decoder_idle) begin
+                if (!idle) begin
                     instruction_en <= 0;
                     instruction_rdy <= 1;
                 end else begin

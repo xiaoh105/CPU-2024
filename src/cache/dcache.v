@@ -52,7 +52,7 @@ module dcache(
                     memory_get_en = 1;
                     memory_write_mode = 1;
                     memory_addr = rw_addr;
-                    memory_data = mem_data;
+                    memory_data = rw_en ? write_data[7:0] : mem_data;
                 end else begin
                     memory_get_en = 0;
                 end
@@ -204,6 +204,7 @@ module dcache(
                     end
                 end
                 2'b00: begin
+                    // $display("Dcache needs to write data back.");
                     if (rw_state != 2'b11) begin
                         if (memory_out_en) begin
                             rw_state <= rw_state + 1;

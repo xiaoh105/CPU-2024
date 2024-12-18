@@ -59,9 +59,13 @@ module reorder_buffer(
     reg predict[31:0];
     reg compressed[31:0];
 
+    reg check_val1_rdy;
+
     always @(*) begin
+        check_val1_rdy = val1_rdy[5'ha];
         if (tail == query_vregid1) begin
-            query_dependency1 = 1;
+            query_dependency1 = append_type == 3'b11 ? 0 : 1;
+            query_val1 = append_address_info;
         end else if (!val1_rdy[query_vregid1]) begin
             if (writeback1_en && writeback1_vregid == query_vregid1) begin
                 query_dependency1 = 0;
@@ -83,7 +87,8 @@ module reorder_buffer(
 
     always @(*) begin
         if (tail == query_vregid2) begin
-            query_dependency2 = 1;
+            query_dependency2 = append_type == 3'b11 ? 0 : 1;
+            query_val2 = append_address_info;
         end else if (!val1_rdy[query_vregid2]) begin
             if (writeback1_en && writeback1_vregid == query_vregid2) begin
                 query_dependency2 = 0;
@@ -104,7 +109,7 @@ module reorder_buffer(
     end
 
     always @(*) begin
-        full = tail + append_en + 1 == head || tail + append_en + 2 == head;
+        full = tail + append_en + 5'd1 == head || tail + append_en + 5'd2 == head;
         next_id = tail + append_en;
     end
 
@@ -127,7 +132,10 @@ module reorder_buffer(
                 predict[tail] <= append_branch_prediction;
                 dest[tail] <= append_dest_regid;
                 addr[tail] <= append_address;
-                tail <= tail + 1;
+                tail <= tail + 5'd1;
+                if (tail + 5'd1 == head) begin
+                    $fatal(1, "Trying to append to Rob while it is full");
+                end
             end
             if (head != tail && val1_rdy[head]) begin
                 case (op_type[head])
@@ -159,10 +167,10 @@ module reorder_buffer(
                         branch_take <= val1[head][0];
                     end
                     3'b011: begin
-                        register_writeback_en <= dest[head] != 0;
+                        register_writeback_en <= dest[head] != 5'b0;
                         commit_en <= 0;
                         predictor_input_en <= 0;
-                        stack_input_en <= 1;
+                        stack_input_en <= dest[head] != 5'b0;
                         register_writeback_id <= dest[head];
                         register_writeback_dependency <= head;
                         register_writeback_val <= val2[head];
@@ -185,6 +193,9 @@ module reorder_buffer(
                     end
                 endcase
                 head <= head + 1;
+                if (head == tail) begin
+                    $fatal(1, "Trying to pop from RoB while it is empty");
+                end
             end else begin
                 register_writeback_en <= 0;
                 commit_en <= 0;

@@ -28,7 +28,7 @@ module reservation_station_alu(
     reg [31:0] a_val[15:0];
     reg b_dependent[15:0];
     reg [31:0] b_val[15:0];
-    reg [3:0] size;
+    reg [4:0] size;
 
     // Instantiate ALU
     wire [31:0] alu_result;
@@ -41,6 +41,10 @@ module reservation_station_alu(
         .op(alu_input_opcode),
         .result(alu_result)
     );
+
+    always @(*) begin
+        full = size == 5'd15 || size == 5'd14 || (size == 5'd13 && in_en);
+    end
 
     // Attach ALU with reservation station:
     // 1. Select an operation that's ready and put it into ALU
@@ -86,6 +90,9 @@ module reservation_station_alu(
         has_ready = ready_width8[0] || ready_width8[1];
         // Set ALU inputs
         if (has_ready) begin
+            if (a_dependent[ready_id] || b_dependent[ready_id]) begin
+                $fatal(1, "Trying to use a slot in ALU that isn't ready");
+            end
             alu_input_a = a_val[ready_id];
             alu_input_b = b_val[ready_id];
             alu_input_opcode = opcode[ready_id];
@@ -142,6 +149,9 @@ module reservation_station_alu(
             id_width8[i] = empty_width4[i] ? id_width4[i] : id_width4[i + 4'd2];
         end
         empty_id = empty_width8[0] ? id_width8[0] : id_width8[1];
+        if (live[empty_id]) begin
+            $fatal(1, "ALU is full");
+        end
     end
     always @(posedge clk) begin
         if (rst) begin
@@ -157,7 +167,6 @@ module reservation_station_alu(
             end else begin
                 size <= size + in_en;
             end
-            full <= size + in_en == 16;
             // Update dependency
             for (int i = 0; i < 16; ++i) begin
                 if (live[i] && a_dependent[i]) begin
@@ -192,7 +201,7 @@ module reservation_station_alu(
                 live[empty_id] <= 1;
                 opcode[empty_id] <= op_type;
                 vreg_id[empty_id] <= vdest_id;
-                a_dependent[empty_id] <= 
+                a_dependent[empty_id] <= !op1_dependent ? 0 :
                     (writeback1_en && writeback1_vregid == op1[4:0]) || 
                     (writeback2_en && writeback2_vregid == op1[4:0]) || 
                     (writeback3_en && writeback3_vregid == op1[4:0]) ? 0 : op1_dependent;
@@ -200,7 +209,7 @@ module reservation_station_alu(
                     (writeback1_en && writeback1_vregid == op1[4:0]) ? writeback1_val : 
                     (writeback2_en && writeback2_vregid == op1[4:0]) ? writeback2_val : 
                     (writeback3_en && writeback3_vregid == op1[4:0]) ? writeback3_val : op1;
-                b_dependent[empty_id] <= 
+                b_dependent[empty_id] <= !op2_dependent ? 0 :
                     (writeback1_en && writeback1_vregid == op2[4:0]) || 
                     (writeback2_en && writeback2_vregid == op2[4:0]) || 
                     (writeback3_en && writeback3_vregid == op2[4:0]) ? 0 : op2_dependent;

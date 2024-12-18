@@ -54,19 +54,24 @@ module load_store_buffer(
     reg [31:0] value[15:0];
     reg [1:0] width[15:0];
 
-    reg check_addr_rdy, check_write_op;
+    reg check_addr_rdy, check_write_op, check_value_rdy;
+    reg [3:0] check_commit_id;
+    reg [31:0] check_value;
 
     reg rob_rst_block;
 
     always @(*) begin
-        check_addr_rdy = addr_rdy[head];
-        check_write_op = write_op[4'hc];
+        check_addr_rdy = addr_rdy[4'h5];
+        check_write_op = write_op[4'h5];
+        check_value_rdy = value_rdy[4'h1];
+        check_value = value[4'h1];
+        full = tail + 4'd1 + rw_en == head || tail + 4'd2 + rw_en == head;
         if (dcache_rw_feedback_en) begin
             dcache_addr = address[head+4'd1][17:0];
             dcache_sign_ext = value[head+4'd1][31];
             dcache_width = width[head+4'd1];
             dcache_value = value[head+4'd1];
-            if (head + 4'd1 != tail) begin
+            if (head + 4'd1 != tail && head != tail) begin
                 if (write_op[head+4'd1] && addr_rdy[head+4'd1] && value_rdy[head+4'd1] && commit[head+4'd1]) begin
                     dcache_rw_en = 1;
                     dcache_write_mode = 1;
@@ -107,6 +112,7 @@ module load_store_buffer(
             for (int i = 0; i < 16; ++i) begin
                 commit[i] <= 0;
                 write_op[i] <= 0;
+                value_rdy[i] <= 1;
             end
         end else if (rob_rst) begin
             reg [3:0] tmp1, tmp2, tmp3, tmp4, new_tail;
@@ -114,14 +120,16 @@ module load_store_buffer(
             tmp2 = (write_op[tmp1+4'd4] && commit[tmp1+4'd4]) ? tmp1 + 4'd4 : tmp1;
             tmp3 = (write_op[tmp2+4'd2] && commit[tmp2+4'd2]) ? tmp2 + 4'd2 : tmp2;
             tmp4 = (write_op[tmp3+4'd1] && commit[tmp3+4'd1]) ? tmp3 + 4'd1 : tmp3;
-            new_tail = (write_op[tmp4] && !commit[tmp4]) ? tmp4 : tmp4 + 4'd1;
+            new_tail = (!write_op[tmp4] || !commit[tmp4]) ? tmp4 : tmp4 + 4'd1;
             for (int i = 0; i < 16; ++i) begin
-                if (new_tail <= i && i < tail || tail < new_tail && new_tail <= i) begin
+                if (new_tail <= i && i < tail || tail < new_tail && (new_tail <= i || i < tail)) begin
+                    write_op[i] <= 0;
                     commit[i] <= 0;
+                    value_rdy[i] <= 1;
                 end
             end
             tail <= new_tail;
-            if (!dcache_idle && head == new_tail) begin
+            if ((!dcache_idle || dcache_rw_en) && head == new_tail) begin
                 rob_rst_block <= 1;
             end
             writeback_en <= 0;
@@ -139,13 +147,17 @@ module load_store_buffer(
                     writeback_en <= 0;
                 end
                 commit[head] <= 0;
+                write_op[head] <= 0;
+                if (head == tail) begin
+                    $fatal(1, "Trying to pop elements in LSB while it is empty");
+                end
                 head <= head + 1;
             end else begin
                 writeback_en <= 0;
             end
             if (rw_en) begin
                 write_op[tail] <= write_mode;
-                addr_rdy[tail] <= 
+                addr_rdy[tail] <= addr_ready ? 1 :
                     (writeback1_en && writeback1_vregid == addr_dependency) || 
                     (writeback2_en && writeback2_vregid == addr_dependency) || 
                     (writeback3_en && writeback3_vregid == addr_dependency) ? 1 : addr_ready;
@@ -156,7 +168,7 @@ module load_store_buffer(
                 address[tail][31:27] <= addr_dependency;
                 width[tail] <= rw_width;
                 if (write_mode) begin
-                    value_rdy[tail] <= 
+                    value_rdy[tail] <= value_ready ? 1 :
                         (writeback1_en && writeback1_vregid == write_value[4:0]) || 
                         (writeback2_en && writeback2_vregid == write_value[4:0]) || 
                         (writeback3_en && writeback3_vregid == write_value[4:0]) ? 1 : value_ready;
@@ -170,6 +182,9 @@ module load_store_buffer(
                     value[tail][31] <= rw_sign_ext;
                 end
                 tail <= tail + 1;
+                if (tail + 1 == head) begin
+                    $fatal(1, "Trying to append to LSB while it is full");
+                end
             end
             for (int i = 0; i < 16; ++i) begin
                 if (!addr_rdy[i]) begin
@@ -199,7 +214,6 @@ module load_store_buffer(
                     end
                 end
             end
-            full <= tail + 4'd1 + rw_en == head || tail + 4'd2 + rw_en == head;
             if (commit_en) begin
                 reg [3:0] tmp1, tmp2, tmp3, tmp4, commit_id;
                 tmp1 = (write_op[head+4'd8] && commit[head+4'd8]) ? head + 4'd8 : head;
@@ -208,6 +222,7 @@ module load_store_buffer(
                 tmp4 = (write_op[tmp3+4'd1] && commit[tmp3+4'd1]) ? tmp3 + 4'd1 : tmp3;
                 commit_id = (write_op[tmp4] && !commit[tmp4]) ? tmp4 : tmp4 + 4'd1;
                 commit[commit_id] <= 1;
+                check_commit_id <= commit_id;
             end
         end
     end
