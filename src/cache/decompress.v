@@ -14,7 +14,7 @@ module decompress(
         end else if (instr[1:0] == 2'b00) begin
             if (instr[15:13] == 3'b000) begin
                 // C.ADDI4SPN to ADDI
-                imm = {2'b0, instr[10:7], instr[12:11], instr[6], instr[5], 2'b00};
+                imm = {2'b0, instr[10:7], instr[12:11], instr[5], instr[6], 2'b00};
                 instr_out = {imm, 5'd2, 3'b000, 2'b01, instr[4:2], 7'b0010011};
             end else if (instr[15:13] == 3'b010) begin
                 // C.LW to LW
