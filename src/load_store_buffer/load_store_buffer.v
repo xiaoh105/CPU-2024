@@ -126,6 +126,9 @@ module load_store_buffer(
             if ((!dcache_idle || dcache_rw_en) && head == new_tail) begin
                 rob_rst_block <= 1;
             end
+            if (dcache_rw_feedback_en && write_op[head]) begin
+                head <= head + 1;
+            end
             writeback_en <= 0;
         end else begin
             if (rob_rst_block) begin
