@@ -54,19 +54,11 @@ module load_store_buffer(
     reg [31:0] value[15:0];
     reg [1:0] width[15:0];
 
-    reg check_addr_rdy, check_write_op, check_value_rdy;
-    reg [3:0] check_commit_id;
-    reg [31:0] check_value;
-
     reg rob_rst_block;
 
     always @(*) begin
-        check_addr_rdy = addr_rdy[4'h5];
-        check_write_op = write_op[4'h5];
-        check_value_rdy = value_rdy[4'h1];
-        check_value = value[4'h1];
         full = tail + 4'd1 + rw_en == head || tail + 4'd2 + rw_en == head;
-        if (dcache_rw_feedback_en) begin
+        if (!rob_rst_block && dcache_rw_feedback_en) begin
             dcache_addr = address[head+4'd1][17:0];
             dcache_sign_ext = value[head+4'd1][31];
             dcache_width = width[head+4'd1];
@@ -222,7 +214,6 @@ module load_store_buffer(
                 tmp4 = (write_op[tmp3+4'd1] && commit[tmp3+4'd1]) ? tmp3 + 4'd1 : tmp3;
                 commit_id = (write_op[tmp4] && !commit[tmp4]) ? tmp4 : tmp4 + 4'd1;
                 commit[commit_id] <= 1;
-                check_commit_id <= commit_id;
             end
         end
     end

@@ -16,7 +16,9 @@ module call_stack(
     always @(posedge clk) begin
         if (rst) begin
             ptr <= 0;
-            addr_stack[0] <= 0;
+            for (int i = 0; i < 16; ++i) begin
+                addr_stack[i] <= 0;
+            end
         end else begin
             if (in_en) begin
                 if (push_mode) begin

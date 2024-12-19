@@ -69,14 +69,4 @@ module regfile(
             end
         end
     end
-
-    always @(posedge clk) begin
-        if (write_en) begin
-            /*$display("Reporting registers");
-            for (int i = 0; i < 32; ++i) begin
-                $display("%2d: %10d", i, reg_value[i]);
-            end
-            $display("");*/
-        end
-    end
 endmodule
