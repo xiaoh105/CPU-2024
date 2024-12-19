@@ -64,7 +64,9 @@ module load_store_buffer(
             dcache_width = width[head+4'd1];
             dcache_value = value[head+4'd1];
             if (head + 4'd1 != tail && head != tail) begin
-                if (write_op[head+4'd1] && addr_rdy[head+4'd1] && value_rdy[head+4'd1] && commit[head+4'd1]) begin
+                if (address[head][17:16] == 2'b11 && address[head+4'd1][17:16] == 2'b11) begin
+                    dcache_rw_en = 0;
+                end else if (write_op[head+4'd1] && addr_rdy[head+4'd1] && value_rdy[head+4'd1] && commit[head+4'd1]) begin
                     dcache_rw_en = 1;
                     dcache_write_mode = 1;
                 end else if (!write_op[head+4'd1] && addr_rdy[head+4'd1]) begin

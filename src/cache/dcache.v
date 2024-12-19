@@ -63,7 +63,7 @@ module dcache(
                 end else begin
                     memory_get_en = 1;
                     memory_write_mode = 1;
-                    memory_addr = {mem_addr[16:2], rw_state + memory_out_en};
+                    memory_addr = {tag[mem_index][replace_id], mem_index, rw_state + memory_out_en};
                     memory_data = data[mem_index][replace_id][rw_state+memory_out_en];
                 end
             end
@@ -212,6 +212,7 @@ module dcache(
                     end else begin
                         if (memory_out_en) begin
                             rw_state <= 0;
+                            dirty[mem_index][replace_id] <= 0;
                             if (mem_write && mem_width == 2'b10) begin
                                 state <= 2'b10;
                             end else begin
