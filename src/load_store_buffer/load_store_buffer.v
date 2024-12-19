@@ -58,7 +58,7 @@ module load_store_buffer(
 
     always @(*) begin
         full = tail + 4'd1 + rw_en == head || tail + 4'd2 + rw_en == head;
-        if (!rob_rst_block && dcache_rw_feedback_en) begin
+        if (!rob_rst && !rob_rst_block && dcache_rw_feedback_en) begin
             dcache_addr = address[head+4'd1][17:0];
             dcache_sign_ext = value[head+4'd1][31];
             dcache_width = width[head+4'd1];
@@ -78,7 +78,7 @@ module load_store_buffer(
             end else begin
                 dcache_rw_en = 0;
             end
-        end else if (head != tail && dcache_idle) begin
+        end else if (!rob_rst && head != tail && dcache_idle) begin
             dcache_addr = address[head][17:0];
             dcache_sign_ext = value[head][31];
             dcache_value = value[head];
@@ -127,7 +127,12 @@ module load_store_buffer(
                 rob_rst_block <= 1;
             end
             if (dcache_rw_feedback_en && write_op[head]) begin
+                if (head == tail) begin
+                    $fatal(1, "Load Store Buffer overflows when reset");
+                end
                 head <= head + 1;
+                commit[head] <= 0;
+                write_op[head] <= 0;
             end
             writeback_en <= 0;
         end else begin
