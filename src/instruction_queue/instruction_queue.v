@@ -126,6 +126,7 @@ module instruction_queue(
             end else begin
                 bootstrap <= 1;
             end
+            instruction_rdy <= 0;
             instruction_en <= 0;
         end else if (reset_block_drop) begin
             if (icache_out_en == 1) begin
