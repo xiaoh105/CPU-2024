@@ -62,19 +62,20 @@ module icache(
         endcase
     end
     reg checkpoint;
-    always @(posedge clk) begin
+    always @(posedge clk) begin : icache_sequential
+        integer i, j;
         if (rst) begin
             instruction_out_en <= 0;
             memory_get_en <= 0;
             current_read_state <= 3'b111;
-            for (int i = 0; i < 128; ++i) begin
-                for (int j = 0; j < 2; ++j) begin
+            for (i = 0; i < 128; i = i + 1) begin
+                for (j = 0; j < 2; j = j + 1) begin
                     busy[i][j] <= 0;
                     lru_tag[i][j] <= 2'b00;
                     tag[i][j] <= 0;
                 end
             end
-        end else begin
+        end else begin : icache_fsm
             reg [6:0] index1, index2;
             reg [7:0] tag1, tag2;
             reg [16:0] addr_tmp;

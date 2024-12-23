@@ -26,7 +26,7 @@ module carry_save_adder
     genvar i;
     assign carry[0] = 0;
     generate
-        for (i = 0; i < WIDTH; ++i) begin : generate_adder
+        for (i = 0; i < WIDTH; i = i + 1) begin : generate_adder
             full_adder adder(a[i], b[i], c[i], sum[i], carry[i + 1]);
         end
     endgenerate

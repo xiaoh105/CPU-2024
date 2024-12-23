@@ -31,7 +31,7 @@ module mul32(
             .sum(carry_save_sum[0]), 
             .carry(carry_save_carry[0])
         );
-        for (i = 1; i < 10; ++i) begin : carry_save_adder_generate
+        for (i = 1; i < 10; i = i + 1) begin : carry_save_adder_generate
             carry_save_adder#(.WIDTH(64)) csa(
                 .a(carry_save_sum[i-1]), 
                 .b(carry_save_carry[i-1]), 
@@ -41,7 +41,8 @@ module mul32(
             );
         end
     endgenerate
-    always @(posedge clk) begin
+    always @(posedge clk) begin : mul_sequential
+        integer i;
         reg [63:0] abs_a, abs_b;
         if (rst) begin
             state <= 3'b111;
@@ -60,7 +61,7 @@ module mul32(
                         idle <= 0;
                         carry_save_input0 <= abs_b[0] ? abs_a : 64'b0;
                         carry_save_input1 <= abs_b[1] ? abs_a << 1 : 64'b0;
-                        for (int i = 0; i < 10; ++i) begin
+                        for (i = 0; i < 10; i = i + 1) begin
                             carry_save_input[i] <= abs_b[i + 2] ? abs_a << (i + 2) : 64'b0;
                         end
                         state <= 2'b00;
@@ -69,7 +70,7 @@ module mul32(
                 2'b00: begin
                     carry_save_input0 <= carry_save_sum[9];
                     carry_save_input1 <= carry_save_carry[9];
-                    for (int i = 0; i < 10; ++i) begin
+                    for (i = 0; i < 10; i = i + 1) begin
                         carry_save_input[i] <= op2[i + 12] ? op1 << (i + 12) : 64'b0;
                     end
                     state <= 2'b01;
@@ -77,7 +78,7 @@ module mul32(
                 2'b01: begin
                     carry_save_input0 <= carry_save_sum[9];
                     carry_save_input1 <= carry_save_carry[9];
-                    for (int i = 0; i < 10; ++i) begin
+                    for (i = 0; i < 10; i = i + 1) begin
                         carry_save_input[i] <= op2[i + 22] ? op1 << (i + 22) : 64'b0;
                     end
                     state <= 2'b10;

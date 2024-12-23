@@ -81,21 +81,22 @@ module dcache(
             end
         endcase
     end
-    always @(posedge clk) begin
+    always @(posedge clk) begin : dcache_sequential
+        integer i, j;
         if (rst) begin
             state <= 2'b11;
             rw_state <= 2'b00;
             rw_feedback_en <= 0;
             idle <= 1;
             io_wait <= 0;
-            for (int i = 0; i < 128; ++i) begin
-                for (int j = 0; j < 2; ++j) begin
+            for (i = 0; i < 128; i = i + 1) begin
+                for (j = 0; j < 2; j = j + 1) begin
                     busy[i][j] <= 0;
                     tag[i][j] <= 0;
                     dirty[i][j] <= 0;
                 end
             end
-        end else begin
+        end else begin : dcache_fsm
             reg replace;
             reg [6:0] index;
             reg [7:0] data_tag;

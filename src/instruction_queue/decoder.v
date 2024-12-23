@@ -73,7 +73,7 @@ module decoder(
         rob_br_predict <= br_prediction;
         rob_addr <= pc;
     end
-    always @(posedge clk) begin
+    always @(posedge clk) begin : decoder_sequential
         reg [6:0] opcode;
         opcode = instruction[6:0];
         if (instruction_in && !rob_rst) begin

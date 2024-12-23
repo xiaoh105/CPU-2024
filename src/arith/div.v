@@ -124,7 +124,7 @@ module normalization(
     output reg [31:0] p,
     output reg [4:0] shift_cnt
 );
-    always @(*) begin
+    always @(*) begin : normalize
         reg [31:0] p_temp[3:0], a_temp[3:0], b_temp[3:0];
         if (!(|b[31:16])) begin
             p_temp[0] = {16'b0, a[31:16]};
@@ -211,7 +211,7 @@ module div32(
     reg [5:0] p_msb6;
     wire [2:0] qi;
     lookup_table lookup_table(.b(b_msb3), .p(p_msb6), .q(qi));
-    always @(posedge clk) begin
+    always @(posedge clk) begin : div_sequential
         reg [31:0] a_abs, b_abs;
         reg [32:0] new_p;
         reg [31:0] new_q;

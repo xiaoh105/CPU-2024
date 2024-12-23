@@ -96,26 +96,27 @@ module load_store_buffer(
             dcache_rw_en = 0;
         end
     end
-    always @(posedge clk) begin
+    always @(posedge clk) begin : lsb_sequential
+        integer i;
         if (rst) begin
             head <= 0;
             tail <= 0;
             rob_rst_block <= 0;
             writeback_en <= 0;
             full <= 0;
-            for (int i = 0; i < 16; ++i) begin
+            for (i = 0; i < 16; i = i + 1) begin
                 commit[i] <= 0;
                 write_op[i] <= 0;
                 value_rdy[i] <= 1;
             end
-        end else if (rob_rst) begin
+        end else if (rob_rst) begin : lsb_reset
             reg [3:0] tmp1, tmp2, tmp3, tmp4, new_tail;
             tmp1 = (write_op[head+4'd8] && commit[head+4'd8]) ? head + 4'd8 : head;
             tmp2 = (write_op[tmp1+4'd4] && commit[tmp1+4'd4]) ? tmp1 + 4'd4 : tmp1;
             tmp3 = (write_op[tmp2+4'd2] && commit[tmp2+4'd2]) ? tmp2 + 4'd2 : tmp2;
             tmp4 = (write_op[tmp3+4'd1] && commit[tmp3+4'd1]) ? tmp3 + 4'd1 : tmp3;
             new_tail = (!write_op[tmp4] || !commit[tmp4]) ? tmp4 : tmp4 + 4'd1;
-            for (int i = 0; i < 16; ++i) begin
+            for (i = 0; i < 16; i = i + 1) begin
                 if (new_tail <= i && i < tail || tail < new_tail && (new_tail <= i || i < tail)) begin
                     write_op[i] <= 0;
                     commit[i] <= 0;
@@ -188,7 +189,7 @@ module load_store_buffer(
                     $fatal(1, "Trying to append to LSB while it is full");
                 end
             end
-            for (int i = 0; i < 16; ++i) begin
+            for (i = 0; i < 16; i = i + 1) begin
                 if (!addr_rdy[i]) begin
                     if (writeback1_en && writeback1_vregid == address[i][31:27]) begin
                         addr_rdy[i] <= 1;
@@ -202,7 +203,7 @@ module load_store_buffer(
                     end
                 end
             end
-            for (int i = 0; i < 16; ++i) begin
+            for (i = 0; i < 16; i = i + 1) begin
                 if (!value_rdy[i]) begin
                     if (writeback1_en && writeback1_vregid == value[i][4:0]) begin
                         value_rdy[i] <= 1;
@@ -216,7 +217,7 @@ module load_store_buffer(
                     end
                 end
             end
-            if (commit_en) begin
+            if (commit_en) begin : lsb_commit
                 reg [3:0] tmp1, tmp2, tmp3, tmp4, commit_id;
                 tmp1 = (write_op[head+4'd8] && commit[head+4'd8]) ? head + 4'd8 : head;
                 tmp2 = (write_op[tmp1+4'd4] && commit[tmp1+4'd4]) ? tmp1 + 4'd4 : tmp1;

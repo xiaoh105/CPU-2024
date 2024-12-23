@@ -53,7 +53,8 @@ module reservation_station_alu(
     reg in_ready;
     reg has_ready;
     reg [3:0] ready_id;
-    always @(*) begin
+    always @(*) begin : alu_ready_calc
+        integer i;
         reg ready[15:0];
         reg ready_width2[7:0];
         reg ready_width4[3:0];
@@ -64,26 +65,26 @@ module reservation_station_alu(
         reg [3:0] ready_id_width8[1:0];
         // Get which slot is ready
         in_ready = in_en && !op1_dependent && !op2_dependent;
-        for (int i = 0; i < 16; ++i) begin
+        for (i = 0; i < 16; i = i + 1) begin
             ready[i] = live[i] && !a_dependent[i] && !b_dependent[i];
         end
-        for (int i = 0; i < 8; ++i) begin
+        for (i = 0; i < 8; i = i + 1) begin
             ready_width2[i] = ready[i] || ready[i + 4'd8];
         end
-        for (int i = 0; i < 4; ++i) begin
+        for (i = 0; i < 4; i = i + 1) begin
             ready_width4[i] = ready_width2[i] || ready_width2[i + 4'd4];
         end
-        for (int i = 0; i < 2; ++i) begin
+        for (i = 0; i < 2; i = i + 1) begin
             ready_width8[i] = ready_width4[i] || ready_width4[i + 4'd2];
         end
         // Find out ready_id
-        for (int i = 0; i < 8; ++i) begin
+        for (i = 0; i < 8; i = i + 1) begin
             ready_id_width2[i] = ready[i] ? i : i + 4'd8;
         end
-        for (int i = 0; i < 4; ++i) begin
+        for (i = 0; i < 4; i = i + 1) begin
             ready_id_width4[i] = ready_width2[i] ? ready_id_width2[i] : ready_id_width2[i + 4'd4];
         end
-        for (int i = 0; i < 2; ++i) begin
+        for (i = 0; i < 2; i = i + 1) begin
             ready_id_width8[i] = ready_width4[i] ? ready_id_width4[i] : ready_id_width4[i + 4'd2];
         end
         ready_id = ready_width8[0] ? ready_id_width8[0] : ready_id_width8[1];
@@ -121,7 +122,8 @@ module reservation_station_alu(
     // 3. Update full status
     // 4. Clear the unordered list if rst is set
     reg [3:0] empty_id;
-    always @(*) begin
+    always @(*) begin : alu_empty_calc
+        integer i;
         // Set up empty status
         reg empty_width2[7:0];
         reg empty_width4[3:0];
@@ -129,23 +131,23 @@ module reservation_station_alu(
         reg [3:0] id_width2[7:0];
         reg [3:0] id_width4[3:0];
         reg [3:0] id_width8[1:0];
-        for (int i = 0; i < 8; ++i) begin
+        for (i = 0; i < 8; i = i + 1) begin
             empty_width2[i] = !live[i] || !live[i + 4'd8];
         end
-        for (int i = 0; i < 4; ++i) begin
+        for (i = 0; i < 4; i = i + 1) begin
             empty_width4[i] = empty_width2[i] || empty_width2[i + 4'd4];
         end
-        for (int i = 0; i < 2; ++i) begin
+        for (i = 0; i < 2; i = i + 1) begin
             empty_width8[i] = empty_width4[i] || empty_width4[i + 4'd2];
         end
         // Find out empty_id
-        for (int i = 0; i < 8; ++i) begin
+        for (i = 0; i < 8; i = i + 1) begin
             id_width2[i] = live[i] ? i + 4'd8 : i;
         end
-        for (int i = 0; i < 4; ++i) begin
+        for (i = 0; i < 4; i = i + 1) begin
             id_width4[i] = empty_width2[i] ? id_width2[i] : id_width2[i + 4'd4];
         end
-        for (int i = 0; i < 2; ++i) begin
+        for (i = 0; i < 2; i = i + 1) begin
             id_width8[i] = empty_width4[i] ? id_width4[i] : id_width4[i + 4'd2];
         end
         empty_id = empty_width8[0] ? id_width8[0] : id_width8[1];
@@ -153,11 +155,12 @@ module reservation_station_alu(
             $fatal(1, "ALU is full");
         end
     end
-    always @(posedge clk) begin
+    always @(posedge clk) begin : alu_sequential
+        integer i;
         if (rst) begin
             full <= 0;
             size <= 0;
-            for (int i = 0; i < 16; ++i) begin
+            for (i = 0; i < 16; i = i + 1) begin
                 live[i] <= 0;
             end
         end else begin
@@ -168,7 +171,7 @@ module reservation_station_alu(
                 size <= size + in_en;
             end
             // Update dependency
-            for (int i = 0; i < 16; ++i) begin
+            for (i = 0; i < 16; i = i + 1) begin
                 if (live[i] && a_dependent[i]) begin
                     if (writeback1_en && a_val[i][4:0] == writeback1_vregid) begin
                         a_dependent[i] <= 0;
@@ -182,7 +185,7 @@ module reservation_station_alu(
                     end
                 end
             end
-            for (int i = 0; i < 16; ++i) begin
+            for (i = 0; i < 16; i = i + 1) begin
                 if (live[i] && b_dependent[i]) begin
                     if (writeback1_en && b_val[i][4:0] == writeback1_vregid) begin
                         b_dependent[i] <= 0;

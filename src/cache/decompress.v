@@ -5,7 +5,7 @@ module decompress(
     input [31:0] instr,
     output reg [31:0] instr_out
 );
-    always @(*) begin
+    always @(*) begin : decompression
         reg [11:0] imm;
         reg [2:0] funct3;
         reg [6:0] funct7;

@@ -66,7 +66,8 @@ module reservation_station_mul(
     reg [2:0] ready_id;
     reg [4:0] current_vregid;
     reg [2:0] current_opcode;
-    always @(*) begin
+    always @(*) begin : mul_ready_set
+        integer i;
         reg ready[7:0];
         reg ready_width2[3:0];
         reg ready_width4[1:0];
@@ -75,20 +76,20 @@ module reservation_station_mul(
         reg [2:0] ready_id_width4[1:0];
         // Get which slot is ready
         in_ready = in_en && !op1_dependent && !op2_dependent;
-        for (int i = 0; i < 8; ++i) begin
+        for (i = 0; i < 8; i = i + 1) begin
             ready[i] = live[i] && !a_dependent[i] && !b_dependent[i];
         end
-        for (int i = 0; i < 4; ++i) begin
+        for (i = 0; i < 4; i = i + 1) begin
             ready_width2[i] = ready[i] || ready[i + 4];
         end
-        for (int i = 0; i < 2; ++i) begin
+        for (i = 0; i < 2; i = i + 1) begin
             ready_width4[i] = ready_width2[i] || ready_width2[i + 2];
         end
         // Find out ready_id
-        for (int i = 0; i < 4; ++i) begin
+        for (i = 0; i < 4; i = i + 1) begin
             ready_id_width2[i] = ready[i] ? i : i + 4;
         end
-        for (int i = 0; i < 2; ++i) begin
+        for (i = 0; i < 2; i = i + 1) begin
             ready_id_width4[i] = ready_width2[i] ? ready_id_width2[i] : ready_id_width2[i + 2];
         end
         ready_id = ready_width4[0] ? ready_id_width4[0] : ready_id_width4[1];
@@ -148,32 +149,34 @@ module reservation_station_mul(
     // 3. Update full status
     // 4. Clear the unordered list if rst is set
     reg [2:0] empty_id;
-    always @(*) begin
+    always @(*) begin : mul_empty_set
+        integer i;
         // Set up empty status
         reg empty_width2[3:0];
         reg empty_width4[1:0];
         reg [2:0] id_width2[3:0];
         reg [2:0] id_width4[1:0];
-        for (int i = 0; i < 4; ++i) begin
+        for (i = 0; i < 4; i = i + 1) begin
             empty_width2[i] = !live[i] || !live[i + 4];
         end
-        for (int i = 0; i < 2; ++i) begin
+        for (i = 0; i < 2; i = i + 1) begin
             empty_width4[i] = empty_width2[i] || empty_width2[i + 2];
         end
         // Find out empty_id
-        for (int i = 0; i < 4; ++i) begin
+        for (i = 0; i < 4; i = i + 1) begin
             id_width2[i] = live[i] ? i + 4 : i;
         end
-        for (int i = 0; i < 2; ++i) begin
+        for (i = 0; i < 2; i = i + 1) begin
             id_width4[i] = empty_width2[i] ? id_width2[i] : id_width2[i + 2];
         end
         empty_id = empty_width4[0] ? id_width4[0] : id_width4[1];
     end
-    always @(posedge clk) begin
+    always @(posedge clk) begin : mul_sequential
+        integer i;
         if (rst) begin
             full <= 0;
             size <= 0;
-            for (int i = 0; i < 8; ++i) begin
+            for (i = 0; i < 8; i = i + 1) begin
                 live[i] <= 0;
             end
         end else begin
@@ -185,7 +188,7 @@ module reservation_station_mul(
             end
             full <= size + in_en == 8;
             // Update dependency
-            for (int i = 0; i < 8; ++i) begin
+            for (i = 0; i < 8; i = i + 1) begin
                 if (live[i] && a_dependent[i]) begin
                     if (writeback1_en && a_val[i][4:0] == writeback1_vregid) begin
                         a_dependent[i] <= 0;
@@ -199,7 +202,7 @@ module reservation_station_mul(
                     end
                 end
             end
-            for (int i = 0; i < 8; ++i) begin
+            for (i = 0; i < 8; i = i + 1) begin
                 if (live[i] && b_dependent[i]) begin
                     if (writeback1_en && b_val[i][4:0] == writeback1_vregid) begin
                         b_dependent[i] <= 0;

@@ -13,10 +13,11 @@ module call_stack(
     always @(*) begin
         top = (in_en && !push_mode) ? addr_stack[ptr-1] : addr_stack[ptr];
     end
-    always @(posedge clk) begin
+    always @(posedge clk) begin : stack_sequential
+        integer i;
         if (rst) begin
             ptr <= 0;
-            for (int i = 0; i < 16; ++i) begin
+            for (i = 0; i < 16; i = i + 1) begin
                 addr_stack[i] <= 0;
             end
         end else begin

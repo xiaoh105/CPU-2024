@@ -42,15 +42,16 @@ module regfile(
                 write_dependency == reg_dependency[query2_id]) ? 
             write_val : reg_value[query2_id];
     end
-    always @(posedge clk) begin
+    always @(posedge clk) begin : regfile_sequential
+        integer i;
         if (rst) begin
-            for (int i = 0; i < 32; ++i) begin
+            for (i = 0; i < 32; i = i + 1) begin
                 reg_has_dependency[i] <= 0;
                 reg_value[i] <= 0;
                 reg_dependency[i] <= 0;
             end
         end else if (dependency_rst) begin
-            for (int i = 0; i < 32; ++i) begin
+            for (i = 0; i < 32; i = i + 1) begin
                 reg_has_dependency[i] <= 0;
             end
         end else begin
