@@ -28,12 +28,10 @@ module memory_controller(
         dcache_out_data = mem_din;
         icache_out_data = mem_din;
     end
-    always @(posedge clk or posedge clk) begin
+    always @(posedge clk) begin
         if (rst) begin
             dcache_out_en <= 0;
             icache_out_en <= 0;
-            mem_addr <= 0;
-            mem_write_mode <= 0;
         end else begin
             dcache_out_en <= dcache_rw_en;
             icache_out_en <= dcache_rw_en ? 0 : icache_rw_en;

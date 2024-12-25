@@ -29,7 +29,8 @@ module dcache(
     reg lru_tag[127:0][1:0];
     reg [7:0] data[127:0][1:0][3:0];
     reg dirty[127:0][1:0];
-    
+
+    reg [31:0] load_data_tmp;
     reg [1:0] state;
     reg [1:0] rw_state;
     reg [16:0] mem_addr;
@@ -43,41 +44,47 @@ module dcache(
     reg replace_id;
     reg sext;
     always @(*) begin
+        load_data = io_display ? {{24{sext ? memory_content[7] : 1'b0}}, memory_content} : load_data_tmp;
+    end
+    always @(*) begin
         case (state)
             2'b11: begin
+                memory_write_mode = io_wait ? mem_write : write_mode;
+                memory_addr = rw_addr;
+                memory_data = io_wait ? mem_data[7:0] : write_data[7:0];
                 if (io_display) begin
                     memory_get_en = 0;
-                    load_data = {{24{sext ? memory_content[7] : 1'b0}}, memory_content};
-                end else if ((rw_en && rw_addr[17:16] == 2'b11 && write_mode || io_wait && mem_write) && !io_buffer_full) begin
+                end else if ((rw_en && rw_addr[17:16] == 2'b11 || io_wait) && !io_buffer_full) begin
                     memory_get_en = 1;
-                    memory_write_mode = 1;
-                    memory_addr = rw_addr;
-                    memory_data = rw_en ? write_data[7:0] : mem_data;
                 end else begin
                     memory_get_en = 0;
                 end
             end
             2'b00: begin
+                memory_write_mode = 1;
+                memory_addr = {tag[mem_index][replace_id], mem_index, rw_state + memory_out_en};
+                memory_data = data[mem_index][replace_id][rw_state+memory_out_en];
                 if (rw_state == 2'b11 && memory_out_en) begin
                     memory_get_en = 0;
                 end else begin
                     memory_get_en = 1;
-                    memory_write_mode = 1;
-                    memory_addr = {tag[mem_index][replace_id], mem_index, rw_state + memory_out_en};
-                    memory_data = data[mem_index][replace_id][rw_state+memory_out_en];
                 end
             end
             2'b01: begin
+                memory_write_mode = 0;
+                memory_addr = {mem_addr[16:2], rw_state + memory_out_en};
+                memory_data = 0;
                 if (rw_state == 2'b11 && memory_out_en) begin
                     memory_get_en = 0;
                 end else begin
                     memory_get_en = 1;
-                    memory_write_mode = 0;
-                    memory_addr = {mem_addr[16:2], rw_state + memory_out_en};
                 end
             end
             2'b10: begin
                 memory_get_en = 0;
+                memory_write_mode = 0;
+                memory_addr = 0;
+                memory_data = 0;
             end
         endcase
     end
@@ -177,7 +184,7 @@ module dcache(
                                         result = {data[index][replace][3], data[index][replace][2], data[index][replace][1], data[index][replace][0]};
                                     end
                                 endcase
-                                load_data <= result;
+                                load_data_tmp <= result;
                                 lru_tag[index][replace] <= 1;
                                 lru_tag[index][replace^1] <= 0;
                             end
@@ -205,7 +212,6 @@ module dcache(
                     end
                 end
                 2'b00: begin
-                    // $display("Dcache needs to write data back.");
                     if (rw_state != 2'b11) begin
                         if (memory_out_en) begin
                             rw_state <= rw_state + 1;
@@ -259,16 +265,16 @@ module dcache(
                     end else begin
                         case (mem_width)
                             2'b00: begin
-                                load_data <= {{24{sext ? data[mem_index][replace_id][offset][7] : 1'b0}}, data[mem_index][replace_id][offset]};
+                                load_data_tmp <= {{24{sext ? data[mem_index][replace_id][offset][7] : 1'b0}}, data[mem_index][replace_id][offset]};
                             end
                             2'b01: begin
-                                load_data <= {{16{sext ? data[mem_index][replace_id][offset+1][7] : 1'b0}}, 
+                                load_data_tmp <= {{16{sext ? data[mem_index][replace_id][offset+1][7] : 1'b0}}, 
                                     data[mem_index][replace_id][offset+1],
                                     data[mem_index][replace_id][offset]
                                 };
                             end
                             2'b10: begin
-                                load_data <= {data[mem_index][replace_id][3], data[mem_index][replace_id][2], 
+                                load_data_tmp <= {data[mem_index][replace_id][3], data[mem_index][replace_id][2], 
                                     data[mem_index][replace_id][1], data[mem_index][replace_id][0]};
                             end
                         endcase

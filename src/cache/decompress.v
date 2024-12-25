@@ -20,7 +20,7 @@ module decompress(
                 // C.LW to LW
                 imm = {5'b0, instr[5], instr[12:10], instr[6], 2'b00};
                 instr_out = {imm, 2'b01, instr[9:7], 3'b010, 2'b01, instr[4:2], 7'b0000011};
-            end else if (instr[15:13] == 3'b110) begin
+            end else begin
                 imm = {5'b0, instr[5], instr[12:10], instr[6], 2'b00};
                 instr_out = {imm[11:5], 2'b01, instr[4:2], 2'b01, instr[9:7], 3'b010, imm[4:0], 7'b0100011};
             end
@@ -82,7 +82,7 @@ module decompress(
                     instr_out = {funct7, 2'b01, instr[4:2], 2'b01, instr[9:7], funct3, 2'b01, instr[9:7], 7'b0110011};
                 end
             end
-        end else if (instr[1:0] == 2'b10) begin
+        end else begin
             if (instr[15:13] == 3'b000) begin
                 // C.SLLI to SLLI
                 imm = {6'b0, instr[12], instr[6:2]};

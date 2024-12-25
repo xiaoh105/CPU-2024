@@ -78,6 +78,7 @@ module reorder_buffer(
                 query_val1 = writeback3_val;
             end else begin
                 query_dependency1 = 1;
+                query_val1 = 0;
             end
         end else begin
             query_dependency1 = 0;
@@ -101,6 +102,7 @@ module reorder_buffer(
                 query_val2 = writeback3_val;
             end else begin
                 query_dependency2 = 1;
+                query_val2 = 0;
             end
         end else begin
             query_dependency2 = 0;

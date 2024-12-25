@@ -41,40 +41,42 @@ module icache(
     always @(*) begin
         case (current_read_state)
             2'b00: begin
+                memory_addr = {current_read_addr[16:2], block_fill_state + memory_out_en};
                 if (block_fill_state == 2'b11 && memory_out_en) begin
                     memory_get_en = 0;
                 end else begin
                     memory_get_en = 1;
-                    memory_addr = {current_read_addr[16:2], block_fill_state + memory_out_en};
                 end
             end
             2'b01: begin
+                memory_addr = {current_read_addr_offset[16:2], block_fill_state + memory_out_en};
                 if (block_fill_state == 2'b11 && memory_out_en) begin
                     memory_get_en = 0;
                 end else begin
                     memory_get_en = 1;
-                    memory_addr = {current_read_addr_offset[16:2], block_fill_state + memory_out_en};
                 end
             end
             default: begin
                 memory_get_en = 0;
+                memory_addr = 0;
             end
         endcase
     end
     reg checkpoint;
-    always @(posedge clk) begin : icache_sequential
+    initial begin : icache_reset
         integer i, j;
+        for (i = 0; i < 128; i = i + 1) begin
+            for (j = 0; j < 2; j = j + 1) begin
+                busy[i][j] <= 0;
+                lru_tag[i][j] <= 2'b00;
+                tag[i][j] <= 0;
+            end
+        end
+    end
+    always @(posedge clk) begin : icache_sequential
         if (rst) begin
             instruction_out_en <= 0;
-            memory_get_en <= 0;
             current_read_state <= 3'b111;
-            for (i = 0; i < 128; i = i + 1) begin
-                for (j = 0; j < 2; j = j + 1) begin
-                    busy[i][j] <= 0;
-                    lru_tag[i][j] <= 2'b00;
-                    tag[i][j] <= 0;
-                end
-            end
         end else begin : icache_fsm
             reg [6:0] index1, index2;
             reg [7:0] tag1, tag2;

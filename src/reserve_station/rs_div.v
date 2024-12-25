@@ -101,7 +101,6 @@ module reservation_station_div(
                     div_input_a <= a_val[ready_id];
                     div_input_b <= b_val[ready_id];
                     div_signed <= !opcode[ready_id][0];
-                    live[ready_id] <= 0;
                     current_vregid <= vreg_id[ready_id];
                     current_opcode <= opcode[ready_id];
                 end else if (in_ready) begin
@@ -159,14 +158,19 @@ module reservation_station_div(
         end
         empty_id = empty_width4[0] ? id_width4[0] : id_width4[1];
     end
+    always @(posedge clk) begin : div_live_set
+        integer i;
+        for (i = 0; i < 8; i = i + 1) begin
+            live[i] <= rst ? 0 : 
+                div_idle && has_ready && i == ready_id ? 0 : 
+                in_en && (!in_ready || has_ready) && i == empty_id ? 1 : live[i];
+        end
+    end
     always @(posedge clk) begin : div_sequential
         integer i;
         if (rst) begin
             full <= 0;
             size <= 0;
-            for (i = 0; i < 8; i = i + 1) begin
-                live[i] <= 0;
-            end
         end else begin
             // Update size
             if ((has_ready || in_ready) & div_idle) begin
@@ -206,7 +210,6 @@ module reservation_station_div(
             end
             // Push new instructions
             if (in_en && (!in_ready || has_ready)) begin
-                live[empty_id] <= 1;
                 opcode[empty_id] <= op_type;
                 vreg_id[empty_id] <= vdest_id;
                 a_dependent[empty_id] <= !op1_dependent ? 0 :

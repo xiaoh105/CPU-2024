@@ -66,6 +66,7 @@ module load_store_buffer(
             if (head + 4'd1 != tail && head != tail) begin
                 if (address[head][17:16] == 2'b11 && address[head+4'd1][17:16] == 2'b11) begin
                     dcache_rw_en = 0;
+                    dcache_write_mode = 0;
                 end else if (write_op[head+4'd1] && addr_rdy[head+4'd1] && value_rdy[head+4'd1] && commit[head+4'd1]) begin
                     dcache_rw_en = 1;
                     dcache_write_mode = 1;
@@ -74,9 +75,11 @@ module load_store_buffer(
                     dcache_write_mode = 0;
                 end else begin
                     dcache_rw_en = 0;
+                    dcache_write_mode = 0;
                 end
             end else begin
                 dcache_rw_en = 0;
+                dcache_write_mode = 0;
             end
         end else if (!rob_rst && head != tail && dcache_idle) begin
             dcache_addr = address[head][17:0];
@@ -91,9 +94,15 @@ module load_store_buffer(
                 dcache_write_mode = 0;
             end else begin
                 dcache_rw_en = 0;
+                dcache_write_mode = 0;
             end
         end else begin
             dcache_rw_en = 0;
+            dcache_write_mode = 0;
+            dcache_addr = 0;
+            dcache_sign_ext = 0;
+            dcache_value = 0;
+            dcache_width = 0;
         end
     end
     always @(posedge clk) begin : lsb_sequential
@@ -103,7 +112,6 @@ module load_store_buffer(
             tail <= 0;
             rob_rst_block <= 0;
             writeback_en <= 0;
-            full <= 0;
             for (i = 0; i < 16; i = i + 1) begin
                 commit[i] <= 0;
                 write_op[i] <= 0;

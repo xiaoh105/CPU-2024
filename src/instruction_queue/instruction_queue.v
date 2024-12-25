@@ -110,6 +110,7 @@ module instruction_queue(
             icache_fetch_addr = next_program_counter;
         end else begin
             icache_fetch_en = 0;
+            icache_fetch_addr = next_program_counter;
         end
     end
 

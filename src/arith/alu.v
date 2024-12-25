@@ -31,6 +31,9 @@ module arithmetic_logic_unit(
                 3'b111: begin
                     result = a >= b;
                 end
+                default: begin
+                    result = 0;
+                end
             endcase
         end else begin
             case (op[2:0])

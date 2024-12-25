@@ -17,7 +17,7 @@ module lookup_table(
                     q = 3'b000;
                 end else if (p <= 5) begin
                     q = 3'b001;
-                end else if (p <= 11) begin
+                end else begin
                     q = 3'b010;
                 end
             end
@@ -30,7 +30,7 @@ module lookup_table(
                     q = 3'b000;
                 end else if (p <= 6) begin
                     q = 3'b001;
-                end else if (p <= 13) begin
+                end else begin
                     q = 3'b010;
                 end
             end
@@ -43,7 +43,7 @@ module lookup_table(
                     q = 3'b000;
                 end else if (p <= 7) begin
                     q = 3'b001;
-                end else if (p <= 14) begin
+                end else begin
                     q = 3'b010;
                 end
             end
@@ -56,7 +56,7 @@ module lookup_table(
                     q = 3'b000;
                 end else if (p <= 8) begin
                     q = 3'b001;
-                end else if (p <= 15) begin
+                end else begin
                     q = 3'b010;
                 end
             end
@@ -69,7 +69,7 @@ module lookup_table(
                     q = 3'b000;
                 end else if (p <= 9) begin
                     q = 3'b001;
-                end else if (p <= 17) begin
+                end else begin
                     q = 3'b010;
                 end
             end
@@ -82,7 +82,7 @@ module lookup_table(
                     q = 3'b000;
                 end else if (p <= 9) begin
                     q = 3'b001;
-                end else if (p <= 18) begin
+                end else begin
                     q = 3'b010;
                 end
             end
@@ -95,7 +95,7 @@ module lookup_table(
                     q = 3'b000;
                 end else if (p <= 10) begin
                     q = 3'b001;
-                end else if (p <= 19) begin
+                end else begin
                     q = 3'b010;
                 end
             end
@@ -108,7 +108,7 @@ module lookup_table(
                     q = 3'b000;
                 end else if (p <= 11) begin
                     q = 3'b001;
-                end else if (p <= 21) begin
+                end else begin
                     q = 3'b010;
                 end
             end
