@@ -4,16 +4,16 @@
 module cpu(
     input  wire                 clk_in,			// system clock signal
     input  wire                 rst_in,			// reset signal
-	  input  wire					        rdy_in,			// ready signal, pause cpu when low
+    input  wire					rdy_in,			// ready signal, pause cpu when low
 
     input  wire [ 7:0]          mem_din,		// data input bus
     output wire [ 7:0]          mem_dout,		// data output bus
     output wire [31:0]          mem_a,			// address bus (only 17:0 is used)
     output wire                 mem_wr,			// write/read signal (1 for write)
 	
-	  input  wire                 io_buffer_full, // 1 if uart buffer is full
+    input  wire                 io_buffer_full, // 1 if uart buffer is full
 	
-	  output wire [31:0]			dbgreg_dout		// cpu register output (debugging demo)
+    output wire [31:0]			dbgreg_dout		// cpu register output (debugging demo)
 );
 
     wire dcache_memory_rw_en;
@@ -30,6 +30,7 @@ module cpu(
     memory_controller memory_controller(
         .clk(clk_in),
         .rst(rst_in),
+        .hci_rdy(rdy_in),
         .dcache_rw_en(dcache_memory_rw_en),
         .dcache_write_mode(dcache_memory_write_mode),
         .dcache_addr(dcache_memory_addr),
@@ -59,6 +60,7 @@ module cpu(
     dcache dcache(
         .clk(clk_in),
         .rst(rst_in),
+        .hci_rdy(rdy_in),
         .rw_en(dcache_rw_en),
         .write_mode(dcache_write_mode),
         .width(dcache_width),
@@ -86,6 +88,7 @@ module cpu(
     icache icache(
         .clk(clk_in),
         .rst(rst_in),
+        .hci_rdy(rdy_in),
         .instruction_get_en(instruction_get_en),
         .instruction_addr(instruction_addr),
         .memory_out_en(icache_memory_out_en),
@@ -124,6 +127,7 @@ module cpu(
         .clk(clk_in),
         .rst(rst_in),
         .rob_rst(rob_rst),
+        .hci_rdy(rdy_in),
         .rw_en(lsb_rw_en),
         .write_mode(lsb_write_mode),
         .addr_ready(lsb_addr_ready),
@@ -170,6 +174,7 @@ module cpu(
     reservation_station_alu rs_alu(
         .clk(clk_in),
         .rst(rst_in || rob_rst),
+        .hci_rdy(rdy_in),
         .in_en(alu_in_en),
         .op_type(alu_op_type),
         .vdest_id(vdest),
@@ -199,6 +204,7 @@ module cpu(
     reservation_station_mul rs_mul(
         .clk(clk_in),
         .rst(rst_in || rob_rst),
+        .hci_rdy(rdy_in),
         .in_en(mul_in_en),
         .op_type(muldiv_op_type),
         .vdest_id(vdest),
@@ -230,6 +236,7 @@ module cpu(
     reservation_station_div rs_div(
         .clk(clk_in),
         .rst(rst_in || rob_rst),
+        .hci_rdy(rdy_in),
         .in_en(div_in_en),
         .op_type(muldiv_op_type),
         .vdest_id(vdest),
@@ -255,6 +262,7 @@ module cpu(
     writeback_controller writeback_controller(
         .clk(clk_in),
         .rst(rst_in | rob_rst),
+        .hci_rdy(rdy_in),
         .writeback_en1(writeback_mul_en),
         .writeback_vregid1(writeback_mul_vregid),
         .writeback_val1(writeback_mul_val),
@@ -287,6 +295,7 @@ module cpu(
         .clk(clk_in),
         .rst(rst_in),
         .dependency_rst(rob_rst),
+        .hci_rdy(rdy_in),
         .write_en(regfile_write_en),
         .write_dependency(regfile_write_dependency),
         .write_id(regfile_write_id),
@@ -325,10 +334,12 @@ module cpu(
     wire stack_push_mode;
     wire [16:0] stack_push_addr;
     wire rob_full;
+    wire rob_has_branch;
     
     reorder_buffer reorder_buffer(
         .clk(clk_in),
         .rst(rst_in),
+        .hci_rdy(rdy_in),
         .append_en(rob_append_en),
         .append_type(rob_append_type),
         .append_c_instruction(rob_append_c_instruction),
@@ -362,6 +373,7 @@ module cpu(
         .stack_push_addr(stack_push_addr),
         .next_id(rob_next_id),
         .full(rob_full),
+        .has_branch(rob_has_branch),
         .commit_en(lsb_commit_en),
         .register_writeback_en(regfile_write_en),
         .register_writeback_id(regfile_write_id),
@@ -373,6 +385,7 @@ module cpu(
     call_stack call_stack(
         .clk(clk_in),
         .rst(rst_in),
+        .hci_rdy(rdy_in),
         .in_en(stack_input_en),
         .push_mode(stack_push_mode),
         .push_addr(stack_push_addr),
@@ -384,6 +397,7 @@ module cpu(
     predictor predictor(
         .clk(clk_in),
         .rst(rst_in),
+        .hci_rdy(rdy_in),
         .branch_record_en(predictor_input_en),
         .branch_address(predictor_addr),
         .branch_take(predictor_branch_take),
@@ -402,6 +416,7 @@ module cpu(
     instruction_queue instruction_queue(
         .clk(clk_in),
         .rst(rst_in),
+        .hci_rdy(rdy_in),
         .pc_rst(rob_rst),
         .new_pc(rob_reset_new_pc),
         .branch_query_prediction(predictor_query_take),
@@ -410,6 +425,7 @@ module cpu(
         .icache_cinstruction(c_instruction),
         .icache_instruction(icache_instruction),
         .lsb_full(lsb_full),
+        .rob_has_branch(rob_has_branch),
         .rs_alu_full(alu_full),
         .rs_mul_full(mul_full),
         .rs_div_full(div_full),
@@ -428,6 +444,7 @@ module cpu(
     decoder decoder(
         .clk(clk_in),
         .rob_rst(rob_rst),
+        .hci_rdy(rdy_in),
         .instruction_in(instruction_decode_en),
         .instruction(instruction),
         .c_instruction(cinstruction_decode),

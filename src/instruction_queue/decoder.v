@@ -2,6 +2,7 @@
 module decoder(
     input clk,
     input rob_rst,
+    input hci_rdy,
     input instruction_in,
     input [31:0] instruction,
     input c_instruction,
@@ -76,7 +77,8 @@ module decoder(
     always @(posedge clk) begin : decoder_sequential
         reg [6:0] opcode;
         opcode = instruction[6:0];
-        if (instruction_in && !rob_rst) begin
+        if (!hci_rdy) begin
+        end else if (instruction_in && !rob_rst) begin
             rob_in_en <= 1;
             alu_in_en <= opcode == 7'b0010011 || 
                 opcode == 7'b0110011 && !instruction[25] || 

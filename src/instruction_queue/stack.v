@@ -3,6 +3,7 @@
 module call_stack(
     input clk,
     input rst,
+    input hci_rdy,
     input in_en,
     input push_mode,
     input [16:0] push_addr,
@@ -20,7 +21,7 @@ module call_stack(
             for (i = 0; i < 16; i = i + 1) begin
                 addr_stack[i] <= 0;
             end
-        end else begin
+        end else if (hci_rdy) begin
             if (in_en) begin
                 if (push_mode) begin
                     ptr <= ptr + 1;

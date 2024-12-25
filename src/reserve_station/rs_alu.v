@@ -2,6 +2,7 @@
 module reservation_station_alu(
     input clk,
     input rst,
+    input hci_rdy,
     input in_en,
     input [4:0] op_type,
     input [4:0] vdest_id,
@@ -106,7 +107,7 @@ module reservation_station_alu(
     always @(posedge clk) begin
         if (rst) begin
             writeback1_en <= 0;
-        end else begin
+        end else if (hci_rdy) begin
             writeback1_en <= has_ready || in_ready;
             writeback1_vregid <= has_ready ? vreg_id[ready_id] : vdest_id;
             writeback1_val <= alu_result;
@@ -156,6 +157,7 @@ module reservation_station_alu(
         integer i;
         for (i = 0; i < 16; i = i + 1) begin
             live[i] <= rst ? 0 : 
+                !hci_rdy ? live[i] : 
                 has_ready && i == ready_id ? 0 : 
                 in_en && (!in_ready || has_ready) && i == empty_id ? 1 : live[i];
         end
@@ -164,7 +166,7 @@ module reservation_station_alu(
         integer i;
         if (rst) begin
             size <= 0;
-        end else begin
+        end else if (hci_rdy) begin
             // Update size
             if (has_ready || in_ready) begin
                 size <= size + in_en - 1;

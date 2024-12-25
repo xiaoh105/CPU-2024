@@ -2,6 +2,7 @@
 module writeback_controller(
     input clk,
     input rst,
+    input hci_rdy,
     input writeback_en1,
     input [4:0] writeback_vregid1,
     input [31:0] writeback_val1,
@@ -23,7 +24,7 @@ module writeback_controller(
         if (rst) begin
             head <= 5'b0;
             tail <= 5'b0;
-        end else begin
+        end else if (hci_rdy) begin
             if (head != tail) begin
                 writeback3_en <= 1;
                 writeback3_vregid <= vregid[head];

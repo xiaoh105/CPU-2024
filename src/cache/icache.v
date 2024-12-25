@@ -7,6 +7,7 @@
 module icache(
     input clk,
     input rst,
+    input hci_rdy,
     input instruction_get_en,
     input [16:0] instruction_addr,
     input memory_out_en,
@@ -77,7 +78,7 @@ module icache(
         if (rst) begin
             instruction_out_en <= 0;
             current_read_state <= 3'b111;
-        end else begin : icache_fsm
+        end else if (hci_rdy) begin : icache_fsm
             reg [6:0] index1, index2;
             reg [7:0] tag1, tag2;
             reg [16:0] addr_tmp;

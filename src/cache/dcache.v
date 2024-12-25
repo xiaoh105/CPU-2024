@@ -7,6 +7,7 @@
 module dcache(
     input clk,
     input rst,
+    input hci_rdy,
     input rw_en,
     input write_mode,
     input [1:0] width,
@@ -103,7 +104,7 @@ module dcache(
                     dirty[i][j] <= 0;
                 end
             end
-        end else begin : dcache_fsm
+        end else if (hci_rdy) begin : dcache_fsm
             reg replace;
             reg [6:0] index;
             reg [7:0] data_tag;
@@ -209,6 +210,7 @@ module dcache(
                         end
                     end else begin
                         rw_feedback_en <= 0;
+                        io_display <= 0;
                     end
                 end
                 2'b00: begin

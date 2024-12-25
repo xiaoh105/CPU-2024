@@ -3,6 +3,7 @@ module instruction_queue(
     input clk,
     input rst,
     input pc_rst,
+    input hci_rdy,
     input [16:0] new_pc,
     input branch_query_prediction,
     input [16:0] stack_top,
@@ -10,6 +11,7 @@ module instruction_queue(
     input icache_cinstruction,
     input [31:0] icache_instruction,
     input lsb_full,
+    input rob_has_branch,
     input rs_alu_full,
     input rs_mul_full,
     input rs_div_full,
@@ -46,7 +48,13 @@ module instruction_queue(
                 7'b0010011: begin
                     idle = !rs_alu_full;
                 end
-                7'b0z00011: begin
+                7'b0000011: begin
+                    idle = !lsb_full && 
+                        (icache_instruction[13:12] != 2'b00 || 
+                            (!rob_has_branch && (!instruction_en || instruction[6:0] != 7'b1100011 && instruction[6:0] != 7'b1100111))
+                        );
+                end
+                7'b0100011: begin
                     idle = !lsb_full;
                 end
                 7'b1100011: begin
@@ -120,6 +128,7 @@ module instruction_queue(
             reset_block_drop <= 0;
             instruction_rdy <= 0;
             bootstrap <= 1;
+        end else if (!hci_rdy) begin
         end else if (pc_rst) begin
             program_counter <= new_pc;
             if (!instruction_rdy && !icache_out_en) begin

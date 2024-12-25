@@ -2,6 +2,7 @@
 module memory_controller(
     input clk,
     input rst,
+    input hci_rdy,
     input dcache_rw_en,
     input dcache_write_mode,
     input [17:0] dcache_addr,
@@ -18,8 +19,8 @@ module memory_controller(
     output reg [7:0] mem_dout
 );
     always @(*) begin
-        mem_write_mode = dcache_rw_en ? dcache_write_mode : 0;
-        mem_addr = dcache_rw_en ? dcache_addr : 
+        mem_write_mode = !hci_rdy ? 0 : dcache_rw_en ? dcache_write_mode : 0;
+        mem_addr = !hci_rdy ? 0 : dcache_rw_en ? dcache_addr : 
             icache_rw_en ? icache_addr : 0;
         mem_dout = dcache_rw_en ? dcache_data :
             icache_rw_en ? icache_addr : 0;
@@ -32,7 +33,7 @@ module memory_controller(
         if (rst) begin
             dcache_out_en <= 0;
             icache_out_en <= 0;
-        end else begin
+        end else if (hci_rdy) begin
             dcache_out_en <= dcache_rw_en;
             icache_out_en <= dcache_rw_en ? 0 : icache_rw_en;
         end

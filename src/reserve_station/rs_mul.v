@@ -2,6 +2,7 @@
 module reservation_station_mul(
     input clk,
     input rst,
+    input hci_rdy,
     input in_en,
     input [2:0] op_type,
     input [4:0] vdest_id,
@@ -96,7 +97,8 @@ module reservation_station_mul(
         has_ready = ready_width4[0] || ready_width4[1];
     end
     always @(posedge clk) begin
-        if (!rst) begin
+        if (!hci_rdy) begin
+        end else if (!rst) begin
             if (mul_idle) begin
                 if (has_ready) begin
                     mul_in_en <= 1;
@@ -135,7 +137,7 @@ module reservation_station_mul(
     always @(posedge clk) begin
         if (rst) begin
             writeback_en <= 0;
-        end else begin
+        end else if (hci_rdy) begin
             writeback_en <= mul_out_en;
             writeback_vregid <= current_vregid;
             writeback_val <= current_opcode == 3'b000 ? mul_result_lo : mul_result_hi;
@@ -174,6 +176,7 @@ module reservation_station_mul(
         integer i;
         for (i = 0; i < 8; i = i + 1) begin
             live[i] <= rst ? 0 : 
+                !hci_rdy ? live[i] :
                 mul_idle && has_ready && i == ready_id ? 0 : 
                 in_en && (!in_ready || has_ready) && i == empty_id ? 1 : live[i];
         end
@@ -183,7 +186,7 @@ module reservation_station_mul(
         if (rst) begin
             full <= 0;
             size <= 0;
-        end else begin
+        end else if (hci_rdy) begin
             // Update size
             if ((has_ready || in_ready) && mul_idle) begin
                 size <= size + in_en - 1;

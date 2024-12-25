@@ -3,6 +3,7 @@ module regfile(
     input clk,
     input rst,
     input dependency_rst,
+    input hci_rdy,
     input write_en,
     input [4:0] write_dependency,
     input [4:0] write_id,
@@ -50,6 +51,7 @@ module regfile(
                 reg_value[i] <= 0;
                 reg_dependency[i] <= 0;
             end
+        end else if (!hci_rdy) begin
         end else if (dependency_rst) begin
             for (i = 0; i < 32; i = i + 1) begin
                 reg_has_dependency[i] <= 0;

@@ -4,6 +4,7 @@
 module reorder_buffer(
     input clk,
     input rst,
+    input hci_rdy,
     input append_en,
     input [2:0] append_type,
     input append_c_instruction,
@@ -37,13 +38,14 @@ module reorder_buffer(
     output reg [16:0] stack_push_addr,
     output reg [4:0] next_id,
     output reg full,
+    output reg has_branch,
     output reg commit_en,
     output reg register_writeback_en,
     output reg [4:0] register_writeback_id,
     output reg [4:0] register_writeback_dependency,
     output reg [31:0] register_writeback_val
 );
-    reg [4:0] head, tail;
+    reg [4:0] head, tail, br_cnt;
     reg [4:0] dest[31:0];
     // 0 - normal writeback ops; 1 - store ops; 2 - branch ops; 3 - jal ops; 4 - jalr ops
     reg [2:0] op_type[31:0];
@@ -113,6 +115,7 @@ module reorder_buffer(
     always @(*) begin
         full = tail + append_en + 5'd1 == head || tail + append_en + 5'd2 == head;
         next_id = tail + append_en;
+        has_branch = br_cnt != 5'b0 || append_en && (append_type == 3'b010 || append_type == 3'b100);
     end
 
     always @(posedge clk) begin
@@ -124,7 +127,8 @@ module reorder_buffer(
             stack_input_en <= 0;
             commit_en <= 0;
             register_writeback_en <= 0;
-        end else begin
+            br_cnt <= 0;
+        end else if (hci_rdy) begin
             if (append_en) begin
                 op_type[tail] <= append_type;
                 compressed[tail] <= append_c_instruction;
@@ -194,6 +198,9 @@ module reorder_buffer(
                         end
                     end
                 endcase
+                br_cnt <= br_cnt - 
+                    (op_type[head] == 3'b010 || op_type[head] == 3'b100) + 
+                    (append_en && (append_type == 3'b010 || append_type == 3'b100));
                 head <= head + 1;
                 if (head == tail) begin
                     $fatal(1, "Trying to pop from RoB while it is empty");
@@ -203,6 +210,7 @@ module reorder_buffer(
                 commit_en <= 0;
                 predictor_input_en <= 0;
                 stack_input_en <= 0;
+                br_cnt <= br_cnt + (append_en && (append_type == 3'b010 || append_type == 3'b100));
             end
             if (writeback1_en) begin
                 if (op_type[writeback1_vregid] == 3'b100) begin

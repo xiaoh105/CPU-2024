@@ -4,6 +4,7 @@ module load_store_buffer(
     input clk,
     input rst,
     input rob_rst,
+    input hci_rdy,
     input rw_en,
     input write_mode,
     input addr_ready,
@@ -117,6 +118,7 @@ module load_store_buffer(
                 write_op[i] <= 0;
                 value_rdy[i] <= 1;
             end
+        end else if (!hci_rdy) begin
         end else if (rob_rst) begin : lsb_reset
             reg [3:0] tmp1, tmp2, tmp3, tmp4, new_tail;
             tmp1 = (write_op[head+4'd8] && commit[head+4'd8]) ? head + 4'd8 : head;

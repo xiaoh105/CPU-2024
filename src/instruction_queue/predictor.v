@@ -2,6 +2,7 @@
 module predictor(
     input clk,
     input rst,
+    input hci_rdy,
     input branch_record_en,
     input [16:0] branch_address,
     input branch_take,
@@ -31,7 +32,7 @@ module predictor(
                 local_predictor[i] <= 2'b00;
                 selector[i] <= 2'b01;
             end
-        end else begin
+        end else if (hci_rdy) begin
             if (branch_record_en) begin : predictor_branch_record
                 reg [9:0] index;
                 index = branch_address[9:0];
